@@ -51,6 +51,17 @@ public class DownloaderWorker implements Runnable {
                 PageInfo pageInfo = downloadAndParse(url);
                 
                 if (pageInfo != null) {
+                    //EStou só a testar daqui:
+                    if (pageInfo != null) {
+                        urlQueue.markAsVisited(url);
+
+                        for (String newUrl : pageInfo.getLinks()) {
+                            urlQueue.addURL(newUrl);
+                        }
+
+                        System.out.println("Worker " + workerId + " indexou: " + pageInfo.getTitle());
+                    }
+                    //até aqui.
                     urlQueue.markAsVisited(url);
                     
                     for (String newUrl : pageInfo.getLinks()) {

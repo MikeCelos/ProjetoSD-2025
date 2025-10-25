@@ -6,6 +6,7 @@ import java.util.*;
 import pt.uc.sd.googol.barrel.BarrelInterface;
 import pt.uc.sd.googol.common.SearchResult;
 
+
 public class Gateway extends UnicastRemoteObject implements GatewayInterface {
 
     private final List<BarrelInterface> barrels = new ArrayList<>();
@@ -25,7 +26,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     }
 
     @Override
-    public List<SearchResult> search(String query) throws RemoteException {
+    public List<SearchResult> search(String query) throws RemoteException  {
         if (barrels.isEmpty()) throw new RemoteException("Nenhum barrel disponível");
 
         for (int i = 0; i < barrels.size(); i++) {
