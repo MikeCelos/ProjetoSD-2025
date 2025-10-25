@@ -3,6 +3,7 @@ package pt.uc.sd.googol.gateway;
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.util.*;
+import java.rmi.server.UnicastRemoteObject;
 import pt.uc.sd.googol.barrel.BarrelInterface;
 import pt.uc.sd.googol.common.SearchResult;
 
@@ -26,19 +27,27 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     }
 
     @Override
-    public List<SearchResult> search(String query) throws RemoteException  {
+    public List<SearchResult> search(String query) throws RemoteException {
         if (barrels.isEmpty()) throw new RemoteException("Nenhum barrel disponível");
 
+        // tokenizar UMA vez antes do loop
+        List<String> terms =
+            java.util.Arrays.stream(query.toLowerCase().split("\\W+"))
+                            .filter(s -> !s.isBlank())
+                            .toList(); // se teu Java <16, usa Collectors.toList()
+
+        RemoteException last = null;
         for (int i = 0; i < barrels.size(); i++) {
             BarrelInterface barrel = barrels.get(current);
             current = (current + 1) % barrels.size(); // round-robin
             try {
-                return barrel.search(query);
+                return barrel.searchAllTerms(terms, 0, 10); // método correto no Barrel
             } catch (RemoteException e) {
-                System.err.println("Barrel falhou, tentando outro...");
+                System.err.println("Barrel falhou, tentando outro... " + e.getMessage());
+                last = e;
             }
         }
-        throw new RemoteException("Todos os barrels falharam.");
+        throw (last != null) ? last : new RemoteException("Todos os barrels falharam.");
     }
 
     @Override

@@ -6,6 +6,6 @@ import java.util.List;
 import pt.uc.sd.googol.common.SearchResult;
 
 public interface GatewayInterface extends Remote {
-    List<SearchResult> search(String query) throws RemoteException;
+    List<SearchResult> search(String query) throws RemoteException; // <- TEM de existir assim
     String addURL(String url) throws RemoteException;
 }
