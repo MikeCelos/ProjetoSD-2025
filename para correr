@@ -1,0 +1,6 @@
+java -cp target/classes pt.uc.sd.googol.barrel.IndexStorageBarrel 1099
+java -cp target/classes pt.uc.sd.googol.barrel.IndexStorageBarrel 1100
+
+java -cp target/classes pt.uc.sd.googol.gateway.Gateway
+java -cp out pt.uc.sd.googol.downloader.downloader - opcional
+java -cp out pt.uc.sd.googol.client.GoogolClient 
