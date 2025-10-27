@@ -7,18 +7,23 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.util.*;
+import pt.uc.sd.googol.barrel.BarrelInterface;
+
 
 public class DownloaderWorker implements Runnable {
     private final int workerId;
     private final URLQueue urlQueue;
     private final RobotsTxtParser robotsParser; // ← NOVO
     private volatile boolean running = true;
+    private final BarrelInterface barrel;
     
-    public DownloaderWorker(int workerId, URLQueue urlQueue, RobotsTxtParser robotsParser) {
+    public DownloaderWorker(int workerId, URLQueue urlQueue, BarrelInterface barrel, RobotsTxtParser robotsParser) {
         this.workerId = workerId;
         this.urlQueue = urlQueue;
-        this.robotsParser = robotsParser; // ← NOVO
+        this.barrel = barrel;
+        this.robotsParser = robotsParser;
     }
+
     
     @Override
     public void run() {
@@ -51,25 +56,22 @@ public class DownloaderWorker implements Runnable {
                 PageInfo pageInfo = downloadAndParse(url);
                 
                 if (pageInfo != null) {
-                    //EStou só a testar daqui:
-                    if (pageInfo != null) {
-                        urlQueue.markAsVisited(url);
-
-                        for (String newUrl : pageInfo.getLinks()) {
-                            urlQueue.addURL(newUrl);
-                        }
-
-                        System.out.println("Worker " + workerId + " indexou: " + pageInfo.getTitle());
-                    }
-                    //até aqui.
                     urlQueue.markAsVisited(url);
-                    
+
                     for (String newUrl : pageInfo.getLinks()) {
                         urlQueue.addURL(newUrl);
                     }
-                    
-                    System.out.println("Worker " + workerId + " indexou: " + pageInfo.getTitle());
+
+                    // Enviar para o Barrel via RMI
+                    try {
+                        barrel.addDocument(pageInfo); // indexa o URL
+                        barrel.addBacklinks(pageInfo.getUrl(), pageInfo.getLinks());
+                        System.out.println("Worker " + workerId + " indexou no Barrel: " + pageInfo.getTitle());
+                    } catch (Exception e) {
+                        System.err.println("Erro ao enviar para Barrel: " + e.getMessage());
+                    }
                 }
+
                 
             } catch (InterruptedException e) {
                 System.out.println("Worker " + workerId + " interrompido");

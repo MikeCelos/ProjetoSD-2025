@@ -5,28 +5,41 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import pt.uc.sd.googol.barrel.BarrelInterface;
+
 
 public class Downloader {
     private final int numWorkers;
     private final URLQueue urlQueue;
-    private final RobotsTxtParser robotsParser; // ← NOVO
+    private final RobotsTxtParser robotsParser;
+    private final BarrelInterface barrel; // refer. RMI
     private ExecutorService executorService;
     private List<DownloaderWorker> workers;
-    
-    public Downloader(int numWorkers) {
+
+    public Downloader(int numWorkers, String barrelHost, int barrelPort) {
         this.numWorkers = numWorkers;
         this.urlQueue = new URLQueue();
-        this.robotsParser = new RobotsTxtParser("Googol Bot 1.0"); // ← NOVO
+        this.robotsParser = new RobotsTxtParser("Googol Bot 1.0");
         this.workers = new ArrayList<>();
+
+        try {
+            Registry registry = LocateRegistry.getRegistry(barrelHost, barrelPort);
+            this.barrel = (BarrelInterface) registry.lookup("barrel");
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Não foi possível conectar ao Barrel");
+        }
     }
-    
+   
     public void start() {
         System.out.println("Iniciando " + numWorkers + " workers...");
         
         executorService = Executors.newFixedThreadPool(numWorkers);
         
         for (int i = 0; i < numWorkers; i++) {
-            DownloaderWorker worker = new DownloaderWorker(i, urlQueue, robotsParser); // ← NOVO
+            DownloaderWorker worker = new DownloaderWorker(i, urlQueue, this.barrel, this.robotsParser);
             workers.add(worker);
             executorService.submit(worker);
         }
@@ -65,21 +78,22 @@ public class Downloader {
     }
     
     public static void main(String[] args) {
-        Downloader downloader = new Downloader(3);
-        
-        downloader.start();
-        
-        // URLs de teste
-        downloader.addURL("https://www.uc.pt");
-        downloader.addURL("https://www.dei.uc.pt");
-        downloader.addURL("https://en.wikipedia.org/wiki/Web_crawler");
-        
-        try {
-            Thread.sleep(30000); // 30 segundos
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        downloader.shutdown();
+    Downloader downloader = new Downloader(3, "localhost", 1099);
+
+    downloader.start();
+
+    // URLs de teste
+    downloader.addURL("https://www.uc.pt");
+    downloader.addURL("https://www.dei.uc.pt");
+    downloader.addURL("https://en.wikipedia.org/wiki/Web_crawler");
+
+    try {
+        Thread.sleep(30000); // 30 segundos
+    } catch (InterruptedException e) {
+        e.printStackTrace();
     }
+
+    downloader.shutdown();
+}
+
 }
