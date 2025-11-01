@@ -8,7 +8,7 @@ import pt.uc.sd.googol.common.PageInfo;
 import pt.uc.sd.googol.common.SearchResult;
 
 public interface BarrelInterface extends Remote {
-    // Escrita do índice (pelos Downloaders)
+    // Escrita do índice (pelos Downloaders)§
     void addDocument(PageInfo page) throws RemoteException;         // indexa um URL (tokens, título, links)
     void addBacklinks(String url, List<String> incoming) throws RemoteException;
 

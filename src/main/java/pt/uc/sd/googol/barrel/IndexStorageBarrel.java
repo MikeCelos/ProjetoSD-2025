@@ -1,9 +1,11 @@
+// ...existing code...
 package pt.uc.sd.googol.barrel;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import pt.uc.sd.googol.common.PageInfo;
@@ -20,56 +22,101 @@ public class IndexStorageBarrel extends UnicastRemoteObject implements BarrelInt
 
     protected IndexStorageBarrel() throws RemoteException { super(); }
 
+    // Normaliza um termo: lowercase, remove diacríticos, elimina não-alfabéticos
+    private static String normalizeTerm(String t) {
+        if (t == null) return null;
+        String s = Normalizer.normalize(t.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", ""); // remove marcas diacríticas
+        s = s.replaceAll("[^a-z\\s]", " ").trim();
+        // se for frase, quebra em tokens e devolve tokens separados por espaço (mas aqui usamos por termo)
+        return s.isEmpty() ? null : s;
+    }
 
     public void addDocument(PageInfo page) throws RemoteException {
+        if (page == null || page.getUrl() == null) return;
+        System.out.println("[Barrel] addDocument recebido: url=" + page.getUrl() + " title=\"" + page.getTitle() + "\" words=" + (page.getWords() == null ? 0 : page.getWords().size()));
         pages.put(page.getUrl(), page);
-        for (String t : page.getWords()) {
-            index.computeIfAbsent(t, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
+
+        if (page.getWords() != null) {
+            for (String raw : page.getWords()) {
+                String norm = normalizeTerm(raw);
+                if (norm == null) continue;
+                // norm pode conter espaços se raw era frase — dividir e indexar tokens
+                for (String token : norm.split("\\s+")) {
+                    if (token.length() <= 2) continue;
+                    index.computeIfAbsent(token, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
+                }
+            }
         }
+
         // atualizar backlinks a partir dos outLinks deste page (cada outLink recebe um backlink deste URL)
-        for (String out : page.getLinks()) {
-            backlinks.computeIfAbsent(out, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
+        if (page.getLinks() != null) {
+            for (String out : page.getLinks()) {
+                if (out == null) continue;
+                backlinks.computeIfAbsent(out, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
+            }
         }
     }
 
     @Override public void addBacklinks(String url, List<String> incoming) {
+        if (url == null || incoming == null) return;
         backlinks.computeIfAbsent(url, k -> ConcurrentHashMap.newKeySet()).addAll(incoming);
+        System.out.println("[Barrel] addBacklinks: " + url + " <- " + incoming.size() + " links");
     }
 
     @Override
     public List<SearchResult> searchAllTerms(List<String> terms, int page, int pageSize) throws RemoteException {
-    if (terms.isEmpty()) return List.of();
+        if (terms == null || terms.isEmpty()) return List.of();
 
-    // interseção dos conjuntos
-    Set<String> acc = null;
-    for (String t : terms) {
-        Set<String> s = index.getOrDefault(t, Set.of());
-        acc = (acc == null) ? new HashSet<>(s) : intersect(acc, s);
-        if (acc.isEmpty()) break;
+        // normalize incoming query terms to match indexed tokens
+        List<String> normTerms = new ArrayList<>();
+        for (String t : terms) {
+            String n = normalizeTerm(t);
+            System.out.println("[debug]" + n);
+            if (n == null) continue;
+            for (String tok : n.split("\\s+")) {
+                if (tok.length() > 2) normTerms.add(tok);
+            }
+        }
+        if (normTerms.isEmpty()) return List.of();
+
+        System.out.println("[Barrel] searchAllTerms terms=" + normTerms);
+
+        // interseção dos conjuntos
+        Set<String> acc = null;
+        for (String t : normTerms) {
+            Set<String> s = index.getOrDefault(t, Set.of());
+            acc = (acc == null) ? new HashSet<>(s) : intersect(acc, s);
+            if (acc.isEmpty()) break;
+        }
+        if (acc == null || acc.isEmpty()) {
+            System.out.println("[Barrel] searchAllTerms -> 0 resultados");
+            return List.of();
+        }
+
+        // ranking por in-degree (nº de backlinks)
+        List<String> urls = new ArrayList<>(acc);
+        urls.sort(Comparator.comparingInt(u -> -backlinks.getOrDefault(u, Set.of()).size()));
+
+        // paginação
+        int from = page * pageSize;
+        int to = Math.min(from + pageSize, urls.size());
+        if (from >= urls.size()) return List.of();
+
+        List<SearchResult> out = new ArrayList<>();
+        for (String u : urls.subList(from, to)) {
+            PageInfo p = pages.get(u);
+            int indeg = backlinks.getOrDefault(u, Set.of()).size();
+            out.add(new SearchResult(u, p != null ? p.getTitle() : u, snippetOf(p), indeg));
+        }
+
+        System.out.println("[Barrel] searchAllTerms -> " + out.size() + " resultados (total matches=" + urls.size() + ")");
+        return out;
     }
-    if (acc == null || acc.isEmpty()) return List.of();
-
-    // ranking por in-degree (nº de backlinks)
-    List<String> urls = new ArrayList<>(acc);
-    urls.sort(Comparator.comparingInt(u -> -backlinks.getOrDefault(u, Set.of()).size()));
-
-    // paginação (10 por página)
-    int from = page * pageSize;
-    int to = Math.min(from + pageSize, urls.size());
-    if (from >= urls.size()) return List.of();
-
-    List<SearchResult> out = new ArrayList<>();
-    for (String u : urls.subList(from, to)) {
-        PageInfo p = pages.get(u);
-        int indeg = backlinks.getOrDefault(u, Set.of()).size();
-        out.add(new SearchResult(u, p != null ? p.getTitle() : u, snippetOf(p), indeg));
-    }
-    return out;
-}
 
 
-    @Override public List<String> getBacklinks(String url) { 
-        return new ArrayList<>(backlinks.getOrDefault(url, Set.of())); 
+    @Override public List<String> getBacklinks(String url) {
+        return new ArrayList<>(backlinks.getOrDefault(url, Set.of()));
     }
 
     @Override public String ping() { return "OK"; }
@@ -101,3 +148,4 @@ public class IndexStorageBarrel extends UnicastRemoteObject implements BarrelInt
         } catch (Exception e) { e.printStackTrace(); }
     }
 }
+// ...existing code...

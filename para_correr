@@ -4,3 +4,4 @@ java -cp target/classes pt.uc.sd.googol.barrel.IndexStorageBarrel 1100
 java -cp target/classes pt.uc.sd.googol.gateway.Gateway
 java -cp target/classes pt.uc.sd.googol.downloader.Downloader
 java -cp target/classes pt.uc.sd.googol.client.GoogolClient
+mvn -q -DskipTests exec:java -Dexec.mainClass=pt.uc.sd.googol.downloader.Downloader

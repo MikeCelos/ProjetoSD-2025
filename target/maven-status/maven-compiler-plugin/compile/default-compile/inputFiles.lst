@@ -4,6 +4,7 @@
 /Users/franciscodevasconcelosesapiresdasilva/Desktop/Main/Faculdade/SD/PL/Projeto/Meta1/src/main/java/pt/uc/sd/googol/common/PageInfo.java
 /Users/franciscodevasconcelosesapiresdasilva/Desktop/Main/Faculdade/SD/PL/Projeto/Meta1/src/main/java/pt/uc/sd/googol/common/SearchResult.java
 /Users/franciscodevasconcelosesapiresdasilva/Desktop/Main/Faculdade/SD/PL/Projeto/Meta1/src/main/java/pt/uc/sd/googol/downloader/Downloader.java
+/Users/franciscodevasconcelosesapiresdasilva/Desktop/Main/Faculdade/SD/PL/Projeto/Meta1/src/main/java/pt/uc/sd/googol/downloader/DownloaderInterface.java
 /Users/franciscodevasconcelosesapiresdasilva/Desktop/Main/Faculdade/SD/PL/Projeto/Meta1/src/main/java/pt/uc/sd/googol/downloader/DownloaderWorker.java
 /Users/franciscodevasconcelosesapiresdasilva/Desktop/Main/Faculdade/SD/PL/Projeto/Meta1/src/main/java/pt/uc/sd/googol/downloader/RobotsTxtParser.java
 /Users/franciscodevasconcelosesapiresdasilva/Desktop/Main/Faculdade/SD/PL/Projeto/Meta1/src/main/java/pt/uc/sd/googol/downloader/URLQueue.java
