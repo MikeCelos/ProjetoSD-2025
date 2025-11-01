@@ -1,8 +1,8 @@
 pt/uc/sd/googol/barrel/SimpleBarrel.class
 pt/uc/sd/googol/downloader/DownloaderWorker.class
-pt/uc/sd/googol/downloader/URLQueue.class
-pt/uc/sd/googol/downloader/RobotsTxtParser$RobotRules.class
-pt/uc/sd/googol/common/PageInfo.class
 pt/uc/sd/googol/downloader/Downloader.class
 pt/uc/sd/googol/barrel/BarrelInterface.class
 pt/uc/sd/googol/downloader/RobotsTxtParser.class
+pt/uc/sd/googol/downloader/URLQueue.class
+pt/uc/sd/googol/downloader/RobotsTxtParser$RobotRules.class
+pt/uc/sd/googol/common/PageInfo.class
