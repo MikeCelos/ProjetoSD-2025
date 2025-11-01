@@ -1,6 +1,7 @@
 package pt.uc.sd.googol.downloader;
 
 import pt.uc.sd.googol.common.PageInfo;
+import pt.uc.sd.googol.barrel.BarrelInterface;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -11,13 +12,15 @@ import java.util.*;
 public class DownloaderWorker implements Runnable {
     private final int workerId;
     private final URLQueue urlQueue;
-    private final RobotsTxtParser robotsParser; // ← NOVO
+    private final RobotsTxtParser robotsParser;
+    private final BarrelInterface barrel;
     private volatile boolean running = true;
     
-    public DownloaderWorker(int workerId, URLQueue urlQueue, RobotsTxtParser robotsParser) {
+    public DownloaderWorker(int workerId, URLQueue urlQueue, RobotsTxtParser robotsParser, BarrelInterface barrel) {
         this.workerId = workerId;
         this.urlQueue = urlQueue;
-        this.robotsParser = robotsParser; // ← NOVO
+        this.robotsParser = robotsParser;
+        this.barrel = barrel;
     }
     
     @Override
@@ -33,14 +36,12 @@ public class DownloaderWorker implements Runnable {
                     continue;
                 }
                 
-                // ← NOVO: Verificar robots.txt
                 if (!robotsParser.isAllowed(url)) {
                     System.out.println("Worker " + workerId + " - URL bloqueado por robots.txt: " + url);
                     urlQueue.markAsVisited(url);
                     continue;
                 }
                 
-                // ← NOVO: Respeitar crawl delay
                 long crawlDelay = robotsParser.getCrawlDelay(url);
                 if (crawlDelay > 0) {
                     Thread.sleep(crawlDelay);
@@ -57,7 +58,17 @@ public class DownloaderWorker implements Runnable {
                         urlQueue.addURL(newUrl);
                     }
                     
-                    System.out.println("Worker " + workerId + " indexou: " + pageInfo.getTitle());
+                    if (barrel != null) {
+                        try {
+                            System.out.println("Worker " + workerId + " - Enviando para Barrel...");
+                            barrel.addDocument(pageInfo);
+                            System.out.println("Worker " + workerId + " - ✓ Indexado: " + pageInfo.getTitle());
+                        } catch (Exception e) {
+                            System.err.println("Worker " + workerId + " - Erro RMI: " + e.getMessage());
+                        }
+                    } else {
+                        System.out.println("Worker " + workerId + " - ✓ Processado (sem Barrel): " + pageInfo.getTitle());
+                    }
                 }
                 
             } catch (InterruptedException e) {
