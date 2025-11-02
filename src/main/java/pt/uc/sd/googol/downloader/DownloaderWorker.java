@@ -1,7 +1,7 @@
 package pt.uc.sd.googol.downloader;
 
 import pt.uc.sd.googol.common.PageInfo;
-import pt.uc.sd.googol.barrel.BarrelInterface;
+import pt.uc.sd.googol.multicast.ReliableMulticast;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -13,14 +13,15 @@ public class DownloaderWorker implements Runnable {
     private final int workerId;
     private final URLQueue urlQueue;
     private final RobotsTxtParser robotsParser;
-    private final BarrelInterface barrel;
+    private final ReliableMulticast multicast; // ← MUDOU: agora usa multicast
     private volatile boolean running = true;
     
-    public DownloaderWorker(int workerId, URLQueue urlQueue, RobotsTxtParser robotsParser, BarrelInterface barrel) {
+    public DownloaderWorker(int workerId, URLQueue urlQueue, 
+                           RobotsTxtParser robotsParser, ReliableMulticast multicast) {
         this.workerId = workerId;
         this.urlQueue = urlQueue;
         this.robotsParser = robotsParser;
-        this.barrel = barrel;
+        this.multicast = multicast;
     }
     
     @Override
@@ -54,20 +55,29 @@ public class DownloaderWorker implements Runnable {
                 if (pageInfo != null) {
                     urlQueue.markAsVisited(url);
                     
+                    // Adicionar novos links à fila
                     for (String newUrl : pageInfo.getLinks()) {
                         urlQueue.addURL(newUrl);
                     }
                     
-                    if (barrel != null) {
+                    // ← USAR RELIABLE MULTICAST
+                    if (multicast != null) {
                         try {
-                            System.out.println("Worker " + workerId + " - Enviando para Barrel...");
-                            barrel.addDocument(pageInfo);
-                            System.out.println("Worker " + workerId + " - ✓ Indexado: " + pageInfo.getTitle());
+                            System.out.println("Worker " + workerId + " - Enviando via multicast...");
+                            ReliableMulticast.MulticastResult result = multicast.sendDocument(pageInfo);
+                            System.out.println("Worker " + workerId + " - ✓ " + result);
                         } catch (Exception e) {
-                            System.err.println("Worker " + workerId + " - Erro RMI: " + e.getMessage());
+                            System.err.println("Worker " + workerId + " - ❌ Multicast falhou: " + e.getMessage());
+                            // Tentar novamente após um tempo
+                            Thread.sleep(5000);
+                            try {
+                                multicast.sendDocument(pageInfo);
+                            } catch (Exception e2) {
+                                System.err.println("Worker " + workerId + " - ❌ Retry final falhou");
+                            }
                         }
                     } else {
-                        System.out.println("Worker " + workerId + " - ✓ Processado (sem Barrel): " + pageInfo.getTitle());
+                        System.out.println("Worker " + workerId + " - ✓ Processado (sem multicast): " + pageInfo.getTitle());
                     }
                 }
                 

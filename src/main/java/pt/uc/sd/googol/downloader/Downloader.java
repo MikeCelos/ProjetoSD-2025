@@ -1,7 +1,7 @@
 package pt.uc.sd.googol.downloader;
 
 import pt.uc.sd.googol.barrel.BarrelInterface;
-import pt.uc.sd.googol.downloader.DownloaderWorker;
+import pt.uc.sd.googol.multicast.ReliableMulticast;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
@@ -14,32 +14,53 @@ public class Downloader {
     private final int numWorkers;
     private final URLQueue urlQueue;
     private final RobotsTxtParser robotsParser;
-    private final BarrelInterface barrel; // ← ADICIONAR
+    private final ReliableMulticast multicast; // ← MUDOU
     private ExecutorService executorService;
     private List<DownloaderWorker> workers;
     
-    public Downloader(int numWorkers, String barrelHost, int barrelPort) {
+    public Downloader(int numWorkers, String barrelHost, int barrelPort, int numBarrels) {
         this.numWorkers = numWorkers;
         this.urlQueue = new URLQueue();
         this.robotsParser = new RobotsTxtParser("Googol Bot 1.0");
         this.workers = new ArrayList<>();
         
-        // ← CONECTAR AO BARREL
-        BarrelInterface tempBarrel = null;
+        // ← CONECTAR A MÚLTIPLOS BARRELS
+        ReliableMulticast tempMulticast = null;
         try {
-            System.out.println("🔍 Conectando ao Barrel em " + barrelHost + ":" + barrelPort);
+            System.out.println("🔍 Conectando a " + numBarrels + " barrels em " + barrelHost + ":" + barrelPort);
             Registry registry = LocateRegistry.getRegistry(barrelHost, barrelPort);
-            tempBarrel = (BarrelInterface) registry.lookup("barrel");
             
-            // Testar conexão
-            String pong = tempBarrel.ping();
-            System.out.println("✓ Barrel conectado: " + pong);
+            List<BarrelInterface> barrels = new ArrayList<>();
+            
+            for (int i = 0; i < numBarrels; i++) {
+                try {
+                    String barrelName = "barrel" + i;
+                    BarrelInterface barrel = (BarrelInterface) registry.lookup(barrelName);
+                    
+                    // Testar conexão
+                    String pong = barrel.ping();
+                    barrels.add(barrel);
+                    System.out.println("✓ " + barrelName + " conectado: " + pong);
+                    
+                } catch (Exception e) {
+                    System.err.println("⚠️ Não foi possível conectar ao barrel" + i + ": " + e.getMessage());
+                }
+            }
+            
+            if (barrels.isEmpty()) {
+                throw new Exception("Nenhum barrel disponível!");
+            }
+            
+            // Criar multicast com os barrels disponíveis
+            tempMulticast = new ReliableMulticast(barrels);
+            System.out.println("✓ Reliable Multicast inicializado com " + barrels.size() + " barrels");
             
         } catch (Exception e) {
-            System.err.println("⚠ Aviso: Barrel não disponível, rodando sem RMI");
+            System.err.println("⚠️ Aviso: Barrels não disponíveis, rodando sem RMI");
             System.err.println("  Erro: " + e.getMessage());
         }
-        this.barrel = tempBarrel;
+        
+        this.multicast = tempMulticast;
     }
     
     public void start() {
@@ -47,7 +68,7 @@ public class Downloader {
         executorService = Executors.newFixedThreadPool(numWorkers);
         
         for (int i = 0; i < numWorkers; i++) {
-            DownloaderWorker worker = new DownloaderWorker(i, urlQueue, robotsParser, barrel);
+            DownloaderWorker worker = new DownloaderWorker(i, urlQueue, robotsParser, multicast);
             workers.add(worker);
             executorService.submit(worker);
         }
@@ -62,6 +83,10 @@ public class Downloader {
     public void shutdown() {
         System.out.println("Encerrando downloaders...");
         robotsParser.printStats();
+        
+        if (multicast != null) {
+            System.out.println("Barrels ativos: " + multicast.getBarrelCount());
+        }
         
         for (DownloaderWorker worker : workers) {
             worker.stop();
@@ -84,8 +109,10 @@ public class Downloader {
     }
     
     public static void main(String[] args) {
-        // Downloader COM RMI
-        Downloader downloader = new Downloader(3, "localhost", 1099);
+        int numBarrels = 2; // ← CONFIGURAR: número de barrels
+        
+        // Downloader COM MULTICAST para 2 barrels
+        Downloader downloader = new Downloader(3, "localhost", 1099, numBarrels);
         
         downloader.start();
         
@@ -95,7 +122,7 @@ public class Downloader {
         downloader.addURL("https://en.wikipedia.org/wiki/Web_crawler");
         
         try {
-            Thread.sleep(30000); // 30 segundos
+            Thread.sleep(60000); // 60 segundos
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

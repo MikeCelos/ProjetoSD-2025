@@ -12,40 +12,39 @@ import java.util.stream.Collectors;
 
 public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface {
     
+    private final int barrelId;
     private final Map<String, PageInfo> pages = new ConcurrentHashMap<>();
-    private final Map<String, Set<String>> index = new ConcurrentHashMap<>(); // palavra -> URLs
-    private final Map<String, Set<String>> backlinks = new ConcurrentHashMap<>(); // URL -> quem aponta
+    private final Map<String, Set<String>> index = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> backlinks = new ConcurrentHashMap<>();
     
-    protected SimpleBarrel() throws RemoteException {
+    protected SimpleBarrel(int barrelId) throws RemoteException {
         super();
+        this.barrelId = barrelId;
     }
     
     @Override
     public void addDocument(PageInfo page) throws RemoteException {
-        System.out.println("📥 Recebido: " + page.getUrl());
+        System.out.println("📥 [Barrel" + barrelId + "] Recebido: " + page.getUrl());
         
         pages.put(page.getUrl(), page);
         
-        // Indexar palavras
         for (String word : page.getWords()) {
             index.computeIfAbsent(word, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
         }
         
-        // Indexar backlinks
         for (String link : page.getLinks()) {
             backlinks.computeIfAbsent(link, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
         }
         
-        System.out.println("✓ Total indexado: " + pages.size() + " páginas");
+        System.out.println("✓ [Barrel" + barrelId + "] Total: " + pages.size() + " páginas");
     }
     
     @Override
     public List<SearchResult> search(List<String> terms, int page) throws RemoteException {
-        System.out.println("🔍 Pesquisando: " + terms);
+        System.out.println("🔍 [Barrel" + barrelId + "] Pesquisando: " + terms);
         
         if (terms.isEmpty()) return new ArrayList<>();
         
-        // Interseção de URLs que contêm TODOS os termos
         Set<String> resultUrls = null;
         
         for (String term : terms) {
@@ -64,7 +63,6 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
             return new ArrayList<>();
         }
         
-        // Ordenar por relevância (número de backlinks)
         List<String> sortedUrls = resultUrls.stream()
             .sorted((u1, u2) -> Integer.compare(
                 backlinks.getOrDefault(u2, Collections.emptySet()).size(),
@@ -72,7 +70,6 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
             ))
             .collect(Collectors.toList());
         
-        // Paginação (10 por página)
         int pageSize = 10;
         int start = page * pageSize;
         int end = Math.min(start + pageSize, sortedUrls.size());
@@ -81,7 +78,6 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
             return new ArrayList<>();
         }
         
-        // Criar resultados
         List<SearchResult> results = new ArrayList<>();
         for (String url : sortedUrls.subList(start, end)) {
             PageInfo pageInfo = pages.get(url);
@@ -105,26 +101,45 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
     
     @Override
     public String getStats() throws RemoteException {
-        return String.format("Páginas: %d | Termos: %d | Backlinks: %d",
-            pages.size(), index.size(), backlinks.size());
+        return String.format("[Barrel%d] Páginas: %d | Termos: %d | Backlinks: %d",
+            barrelId, pages.size(), index.size(), backlinks.size());
     }
     
     @Override
     public String ping() throws RemoteException {
-        return "PONG";
+        return "PONG from Barrel" + barrelId;
     }
     
+    // ===== MAIN: Inicia múltiplos barrels =====
     public static void main(String[] args) {
         try {
             int port = 1099;
-            Registry registry = LocateRegistry.createRegistry(port);
-            SimpleBarrel barrel = new SimpleBarrel();
-            registry.rebind("barrel", barrel);
-            System.out.println("✓ Barrel rodando na porta " + port);
+            int numBarrels = 2; // ← Configurável
             
+            // Criar registry (só uma vez)
+            Registry registry;
+            try {
+                registry = LocateRegistry.createRegistry(port);
+                System.out.println("✓ Registry criado na porta " + port);
+            } catch (Exception e) {
+                registry = LocateRegistry.getRegistry(port);
+                System.out.println("✓ Registry existente na porta " + port);
+            }
+            
+            // Criar e registrar múltiplos barrels
+            for (int i = 0; i < numBarrels; i++) {
+                SimpleBarrel barrel = new SimpleBarrel(i);
+                registry.rebind("barrel" + i, barrel);
+                System.out.println("✓ Barrel" + i + " rodando");
+            }
+            
+            System.out.println("\n🎯 " + numBarrels + " Barrels prontos para receber multicast!");
+            
+            // Manter vivo
             while (true) {
                 Thread.sleep(1000);
             }
+            
         } catch (Exception e) {
             e.printStackTrace();
         }

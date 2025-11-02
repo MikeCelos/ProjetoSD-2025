@@ -117,6 +117,18 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     public String ping() throws RemoteException {
         return "Gateway OK - " + barrels.size() + " barrels disponíveis";
     }
+
+        /**
+     * Remove entradas expiradas do cache
+     */
+    private void cleanExpiredCache() {
+        int before = searchCache.size();
+        searchCache.entrySet().removeIf(entry -> entry.getValue().isExpired());
+        int removed = before - searchCache.size();
+        if (removed > 0) {
+            System.out.println("🧹 Cache limpo: " + removed + " entradas removidas");
+        }
+    }
     
     // Load balancing - Round Robin
     private synchronized BarrelInterface getNextBarrel() throws RemoteException {
@@ -154,21 +166,23 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         try {
             int gatewayPort = 1100;
             int barrelPort = 1099;
-            int numBarrels = 1; // Pode ser configurável
+            int numBarrels = 2; // ← Configurar número de barrels
             
             // Conectar aos barrels
             List<BarrelInterface> barrels = new ArrayList<>();
             Registry barrelRegistry = LocateRegistry.getRegistry("localhost", barrelPort);
             
+            System.out.println("🔍 Procurando " + numBarrels + " barrels...");
+            
             for (int i = 0; i < numBarrels; i++) {
                 try {
-                    String barrelName = (i == 0) ? "barrel" : "barrel" + i;
+                    String barrelName = "barrel" + i; // ← SEMPRE barrel0, barrel1, barrel2...
                     BarrelInterface barrel = (BarrelInterface) barrelRegistry.lookup(barrelName);
                     barrel.ping(); // Testar conexão
                     barrels.add(barrel);
                     System.out.println("✓ Conectado ao " + barrelName);
                 } catch (Exception e) {
-                    System.err.println("⚠ Não foi possível conectar ao barrel" + i);
+                    System.err.println("⚠ Não foi possível conectar ao barrel" + i + ": " + e.getMessage());
                 }
             }
             
@@ -204,15 +218,6 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         } catch (Exception e) {
             System.err.println("Erro ao iniciar Gateway:");
             e.printStackTrace();
-        }
-    }
-    
-    private void cleanExpiredCache() {
-        int before = searchCache.size();
-        searchCache.entrySet().removeIf(entry -> entry.getValue().isExpired());
-        int removed = before - searchCache.size();
-        if (removed > 0) {
-            System.out.println("🧹 Cache limpo: " + removed + " entradas removidas");
         }
     }
 }

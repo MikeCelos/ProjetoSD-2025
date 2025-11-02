@@ -1,4 +1,5 @@
 /home/andr-ramos/Documents/ProjetoSD-2025/src/main/java/pt/uc/sd/googol/barrel/BarrelInterface.java
+/home/andr-ramos/Documents/ProjetoSD-2025/src/main/java/pt/uc/sd/googol/barrel/BarrelLauncher.java
 /home/andr-ramos/Documents/ProjetoSD-2025/src/main/java/pt/uc/sd/googol/barrel/SimpleBarrel.java
 /home/andr-ramos/Documents/ProjetoSD-2025/src/main/java/pt/uc/sd/googol/client/GoogolClient.java
 /home/andr-ramos/Documents/ProjetoSD-2025/src/main/java/pt/uc/sd/googol/common/PageInfo.java
@@ -9,3 +10,4 @@
 /home/andr-ramos/Documents/ProjetoSD-2025/src/main/java/pt/uc/sd/googol/gateway/Gateway.java
 /home/andr-ramos/Documents/ProjetoSD-2025/src/main/java/pt/uc/sd/googol/gateway/GatewayInterface.java
 /home/andr-ramos/Documents/ProjetoSD-2025/src/main/java/pt/uc/sd/googol/gateway/SearchResult.java
+/home/andr-ramos/Documents/ProjetoSD-2025/src/main/java/pt/uc/sd/googol/multicast/ReliableMulticast.java
