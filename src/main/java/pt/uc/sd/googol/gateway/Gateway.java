@@ -22,7 +22,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         super();
         this.barrels = barrels;
         this.searchCache = new ConcurrentHashMap<>();
-        System.out.println("✓ Gateway inicializado com " + barrels.size() + " barrels");
+        System.out.println(" Gateway inicializado com " + barrels.size() + " barrels");
     }
     
     @Override
@@ -42,11 +42,11 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         // Verificar cache
         CachedResult cached = searchCache.get(cacheKey);
         if (cached != null && !cached.isExpired()) {
-            System.out.println("💾 Cache hit: " + cacheKey);
+            System.out.println(" Cache hit: " + cacheKey);
             return cached.results;
         }
         
-        System.out.println("🔍 Pesquisando: " + normalizedTerms + " (página " + page + ")");
+        System.out.println(" Pesquisando: " + normalizedTerms + " (página " + page + ")");
         
         // Escolher barrel (round-robin)
         BarrelInterface barrel = getNextBarrel();
@@ -58,11 +58,11 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             // Guardar em cache
             searchCache.put(cacheKey, new CachedResult(results));
             
-            System.out.println("✓ Encontrados " + results.size() + " resultados");
+            System.out.println(" Encontrados " + results.size() + " resultados");
             return results;
             
         } catch (RemoteException e) {
-            System.err.println("❌ Erro ao pesquisar no barrel: " + e.getMessage());
+            System.err.println(" Erro ao pesquisar no barrel: " + e.getMessage());
             
             // Tentar com outro barrel
             removeBarrel(barrel);
@@ -75,7 +75,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     
     @Override
     public List<String> getBacklinks(String url) throws RemoteException {
-        System.out.println("🔗 Obtendo backlinks de: " + url);
+        System.out.println(" Obtendo backlinks de: " + url);
         
         // Agregar backlinks de todos os barrels
         Set<String> allBacklinks = new HashSet<>();
@@ -126,7 +126,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         searchCache.entrySet().removeIf(entry -> entry.getValue().isExpired());
         int removed = before - searchCache.size();
         if (removed > 0) {
-            System.out.println("🧹 Cache limpo: " + removed + " entradas removidas");
+            System.out.println(" Cache limpo: " + removed + " entradas removidas");
         }
     }
     
@@ -143,7 +143,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     
     private synchronized void removeBarrel(BarrelInterface barrel) {
         barrels.remove(barrel);
-        System.err.println("⚠ Barrel removido. Restantes: " + barrels.size());
+        System.err.println(" Barrel removido. Restantes: " + barrels.size());
     }
     
     // Classe interna para cache
@@ -172,7 +172,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             List<BarrelInterface> barrels = new ArrayList<>();
             Registry barrelRegistry = LocateRegistry.getRegistry("localhost", barrelPort);
             
-            System.out.println("🔍 Procurando " + numBarrels + " barrels...");
+            System.out.println(" Procurando " + numBarrels + " barrels...");
             
             for (int i = 0; i < numBarrels; i++) {
                 try {
@@ -195,8 +195,8 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             Gateway gateway = new Gateway(barrels);
             gatewayRegistry.rebind("gateway", gateway);
             
-            System.out.println("✓ Gateway rodando na porta " + gatewayPort);
-            System.out.println("✓ Conectado a " + barrels.size() + " barrel(s)");
+            System.out.println(" Gateway rodando na porta " + gatewayPort);
+            System.out.println(" Conectado a " + barrels.size() + " barrel(s)");
             
             // Thread para limpar cache periodicamente
             new Thread(() -> {

@@ -31,7 +31,7 @@ public class ReliableMulticast {
         this.maxRetries = maxRetries;
         this.retryDelayMs = retryDelayMs;
         
-        System.out.println("🔄 Reliable Multicast inicializado:");
+        System.out.println(" Reliable Multicast inicializado:");
         System.out.println("   - Barrels: " + barrels.size());
         System.out.println("   - Min réplicas: " + minReplicas);
         System.out.println("   - Max retries: " + maxRetries);
@@ -46,11 +46,11 @@ public class ReliableMulticast {
         
         // Evitar duplicados
         if (sentMessages.contains(messageId)) {
-            System.out.println("⚠️ Mensagem duplicada ignorada: " + messageId);
+            System.out.println(" Mensagem duplicada ignorada: " + messageId);
             return new MulticastResult(true, barrels.size(), 0);
         }
         
-        System.out.println("📤 Multicast: " + page.getUrl());
+        System.out.println(" Multicast: " + page.getUrl());
         
         Map<BarrelInterface, Boolean> deliveryStatus = new ConcurrentHashMap<>();
         
@@ -65,7 +65,7 @@ public class ReliableMulticast {
                     deliveryStatus.put(barrel, true);
                     return true;
                 } catch (RemoteException e) {
-                    System.err.println("❌ Falha no envio para barrel: " + e.getMessage());
+                    System.err.println(" Falha no envio para barrel: " + e.getMessage());
                     deliveryStatus.put(barrel, false);
                     return false;
                 }
@@ -78,7 +78,7 @@ public class ReliableMulticast {
             try {
                 future.get(5, TimeUnit.SECONDS);
             } catch (Exception e) {
-                System.err.println("⚠️ Timeout ou erro: " + e.getMessage());
+                System.err.println(" Timeout ou erro: " + e.getMessage());
             }
         }
         
@@ -88,11 +88,11 @@ public class ReliableMulticast {
         long successCount = deliveryStatus.values().stream().filter(b -> b).count();
         long failedCount = barrels.size() - successCount;
         
-        System.out.println("📊 Primeira tentativa: " + successCount + "/" + barrels.size() + " OK");
+        System.out.println(" Primeira tentativa: " + successCount + "/" + barrels.size() + " OK");
         
         // Fase 2: Retry para os que falharam
         if (successCount < minReplicas && failedCount > 0) {
-            System.out.println("🔄 Iniciando retries...");
+            System.out.println(" Iniciando retries...");
             
             for (int attempt = 1; attempt <= maxRetries && successCount < minReplicas; attempt++) {
                 System.out.println("   Tentativa " + attempt + "/" + maxRetries);
@@ -109,9 +109,9 @@ public class ReliableMulticast {
                             entry.getKey().addDocument(page);
                             entry.setValue(true);
                             successCount++;
-                            System.out.println("   ✓ Barrel recuperado");
+                            System.out.println(" Barrel recuperado");
                         } catch (RemoteException e) {
-                            System.err.println("   ✗ Retry falhou: " + e.getMessage());
+                            System.err.println("  Retry falhou: " + e.getMessage());
                         }
                     }
                 }
@@ -124,7 +124,7 @@ public class ReliableMulticast {
                 "Falha no multicast: apenas %d/%d barrels confirmaram (mínimo: %d)",
                 successCount, barrels.size(), minReplicas
             );
-            System.err.println("❌ " + error);
+            System.err.println(" " + error);
             throw new RemoteException(error);
         }
         
@@ -136,7 +136,7 @@ public class ReliableMulticast {
             sentMessages.clear();
         }
         
-        System.out.println("✅ Multicast completo: " + successCount + "/" + barrels.size());
+        System.out.println(" Multicast completo: " + successCount + "/" + barrels.size());
         return new MulticastResult(true, (int) successCount, (int) failedCount);
     }
     
@@ -145,7 +145,7 @@ public class ReliableMulticast {
      */
     public synchronized void removeBarrel(BarrelInterface barrel) {
         if (barrels.remove(barrel)) {
-            System.out.println("⚠️ Barrel removido. Restantes: " + barrels.size());
+            System.out.println(" Barrel removido. Restantes: " + barrels.size());
         }
     }
     
@@ -155,7 +155,7 @@ public class ReliableMulticast {
     public synchronized void addBarrel(BarrelInterface barrel) {
         if (!barrels.contains(barrel)) {
             barrels.add(barrel);
-            System.out.println("✓ Barrel adicionado. Total: " + barrels.size());
+            System.out.println(" Barrel adicionado. Total: " + barrels.size());
         }
     }
     

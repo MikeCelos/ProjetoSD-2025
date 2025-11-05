@@ -65,19 +65,19 @@ public class DownloaderWorker implements Runnable {
                         try {
                             System.out.println("Worker " + workerId + " - Enviando via multicast...");
                             ReliableMulticast.MulticastResult result = multicast.sendDocument(pageInfo);
-                            System.out.println("Worker " + workerId + " - ✓ " + result);
+                            System.out.println("Worker " + workerId + " - " + result);
                         } catch (Exception e) {
-                            System.err.println("Worker " + workerId + " - ❌ Multicast falhou: " + e.getMessage());
+                            System.err.println("Worker " + workerId + " - Multicast falhou: " + e.getMessage());
                             // Tentar novamente após um tempo
                             Thread.sleep(5000);
                             try {
                                 multicast.sendDocument(pageInfo);
                             } catch (Exception e2) {
-                                System.err.println("Worker " + workerId + " - ❌ Retry final falhou");
+                                System.err.println("Worker " + workerId + " - Retry final falhou");
                             }
                         }
                     } else {
-                        System.out.println("Worker " + workerId + " - ✓ Processado (sem multicast): " + pageInfo.getTitle());
+                        System.out.println("Worker " + workerId + " - Processado (sem multicast): " + pageInfo.getTitle());
                     }
                 }
                 

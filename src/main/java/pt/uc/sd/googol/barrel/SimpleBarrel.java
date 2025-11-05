@@ -24,7 +24,7 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
     
     @Override
     public void addDocument(PageInfo page) throws RemoteException {
-        System.out.println("📥 [Barrel" + barrelId + "] Recebido: " + page.getUrl());
+        System.out.println(" [Barrel" + barrelId + "] Recebido: " + page.getUrl());
         
         pages.put(page.getUrl(), page);
         
@@ -36,12 +36,12 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
             backlinks.computeIfAbsent(link, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
         }
         
-        System.out.println("✓ [Barrel" + barrelId + "] Total: " + pages.size() + " páginas");
+        System.out.println(" [Barrel" + barrelId + "] Total: " + pages.size() + " páginas");
     }
     
     @Override
     public List<SearchResult> search(List<String> terms, int page) throws RemoteException {
-        System.out.println("🔍 [Barrel" + barrelId + "] Pesquisando: " + terms);
+        System.out.println(" [Barrel" + barrelId + "] Pesquisando: " + terms);
         
         if (terms.isEmpty()) return new ArrayList<>();
         
@@ -120,20 +120,20 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
             Registry registry;
             try {
                 registry = LocateRegistry.createRegistry(port);
-                System.out.println("✓ Registry criado na porta " + port);
+                System.out.println("Registry criado na porta " + port);
             } catch (Exception e) {
                 registry = LocateRegistry.getRegistry(port);
-                System.out.println("✓ Registry existente na porta " + port);
+                System.out.println("Registry existente na porta " + port);
             }
             
             // Criar e registrar múltiplos barrels
             for (int i = 0; i < numBarrels; i++) {
                 SimpleBarrel barrel = new SimpleBarrel(i);
                 registry.rebind("barrel" + i, barrel);
-                System.out.println("✓ Barrel" + i + " rodando");
+                System.out.println(" Barrel" + i + " rodando");
             }
             
-            System.out.println("\n🎯 " + numBarrels + " Barrels prontos para receber multicast!");
+            System.out.println("\n " + numBarrels + " Barrels prontos para receber multicast!");
             
             // Manter vivo
             while (true) {

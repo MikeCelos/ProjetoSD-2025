@@ -27,7 +27,7 @@ public class Downloader {
         // ← CONECTAR A MÚLTIPLOS BARRELS
         ReliableMulticast tempMulticast = null;
         try {
-            System.out.println("🔍 Conectando a " + numBarrels + " barrels em " + barrelHost + ":" + barrelPort);
+            System.out.println(" Conectando a " + numBarrels + " barrels em " + barrelHost + ":" + barrelPort);
             Registry registry = LocateRegistry.getRegistry(barrelHost, barrelPort);
             
             List<BarrelInterface> barrels = new ArrayList<>();
@@ -40,10 +40,10 @@ public class Downloader {
                     // Testar conexão
                     String pong = barrel.ping();
                     barrels.add(barrel);
-                    System.out.println("✓ " + barrelName + " conectado: " + pong);
+                    System.out.println(" " + barrelName + " conectado: " + pong);
                     
                 } catch (Exception e) {
-                    System.err.println("⚠️ Não foi possível conectar ao barrel" + i + ": " + e.getMessage());
+                    System.err.println(" Não foi possível conectar ao barrel" + i + ": " + e.getMessage());
                 }
             }
             
@@ -56,7 +56,7 @@ public class Downloader {
             System.out.println("✓ Reliable Multicast inicializado com " + barrels.size() + " barrels");
             
         } catch (Exception e) {
-            System.err.println("⚠️ Aviso: Barrels não disponíveis, rodando sem RMI");
+            System.err.println(" Aviso: Barrels não disponíveis, rodando sem RMI");
             System.err.println("  Erro: " + e.getMessage());
         }
         

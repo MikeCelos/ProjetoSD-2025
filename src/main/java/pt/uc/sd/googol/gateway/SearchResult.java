@@ -24,7 +24,7 @@ public class SearchResult implements Serializable {
     
     @Override
     public String toString() {
-        return String.format("📄 %s\n   %s\n   Relevância: %d\n   %s\n",
+        return String.format(" %s\n   %s\n   Relevância: %d\n   %s\n",
             title, url, relevance, snippet);
     }
 }
