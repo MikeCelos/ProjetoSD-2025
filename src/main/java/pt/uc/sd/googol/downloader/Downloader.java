@@ -4,6 +4,7 @@ import pt.uc.sd.googol.barrel.BarrelInterface;
 import pt.uc.sd.googol.multicast.ReliableMulticast;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -12,52 +13,69 @@ import java.util.concurrent.TimeUnit;
 
 public class Downloader {
     private final int numWorkers;
-    private final URLQueue urlQueue;
+    
+    // MUDANÇA 1: Usar a Interface, não a classe concreta
+    private URLQueueInterface urlQueue; 
+    
     private final RobotsTxtParser robotsParser;
-    private final ReliableMulticast multicast; // ← MUDOU
+    private final ReliableMulticast multicast;
     private ExecutorService executorService;
     private List<DownloaderWorker> workers;
     
-    public Downloader(int numWorkers, String barrelHost, int barrelPort, int numBarrels) {
+    // MUDANÇA 2: Receber numBarrels e dados da Queue no construtor
+    public Downloader(int numWorkers, String barrelHost, int barrelPort, 
+                      int numBarrels, String queueHost, int queuePort) {
         this.numWorkers = numWorkers;
-        this.urlQueue = new URLQueue();
         this.robotsParser = new RobotsTxtParser("Googol Bot 1.0");
         this.workers = new ArrayList<>();
         
-        // ← CONECTAR A MÚLTIPLOS BARRELS
+        // --- PARTE 1: CONECTAR À QUEUE REMOTA ---
+        try {
+            System.out.println(" Conectando à URL Queue em " + queueHost + ":" + queuePort + "...");
+            Registry queueRegistry = LocateRegistry.getRegistry(queueHost, queuePort);
+            
+            // Lookup: Procura o objeto "queue" no servidor remoto
+            this.urlQueue = (URLQueueInterface) queueRegistry.lookup("queue");
+            
+            // Teste: Ping para ver se está vivo
+            System.out.println(" ✓ " + this.urlQueue.ping());
+            
+        } catch (Exception e) {
+            System.err.println(" ERRO CRÍTICO: Não foi possível conectar à URL Queue!");
+            e.printStackTrace();
+            // Sem fila, o downloader não pode trabalhar, por isso lançamos erro fatal ou terminamos
+            throw new RuntimeException("Queue não encontrada. O QueueServer está a correr?");
+        }
+
+        // --- PARTE 2: CONECTAR AOS BARRELS (MULTICAST) ---
         ReliableMulticast tempMulticast = null;
         try {
             System.out.println(" Conectando a " + numBarrels + " barrels em " + barrelHost + ":" + barrelPort);
-            Registry registry = LocateRegistry.getRegistry(barrelHost, barrelPort);
+            Registry barrelRegistry = LocateRegistry.getRegistry(barrelHost, barrelPort);
             
             List<BarrelInterface> barrels = new ArrayList<>();
             
             for (int i = 0; i < numBarrels; i++) {
                 try {
                     String barrelName = "barrel" + i;
-                    BarrelInterface barrel = (BarrelInterface) registry.lookup(barrelName);
-                    
-                    // Testar conexão
-                    String pong = barrel.ping();
+                    BarrelInterface barrel = (BarrelInterface) barrelRegistry.lookup(barrelName);
+                    barrel.ping(); 
                     barrels.add(barrel);
-                    System.out.println(" " + barrelName + " conectado: " + pong);
-                    
+                    System.out.println("  ✓ " + barrelName + " conectado");
                 } catch (Exception e) {
-                    System.err.println(" Não foi possível conectar ao barrel" + i + ": " + e.getMessage());
+                    System.err.println("  ⚠ Falha ao conectar " + "barrel" + i);
                 }
             }
             
             if (barrels.isEmpty()) {
-                throw new Exception("Nenhum barrel disponível!");
+                System.err.println("AVISO: Nenhum barrel encontrado. O sistema não guardará dados.");
+            } else {
+                tempMulticast = new ReliableMulticast(barrels);
+                System.out.println(" ✓ Multicast iniciado com " + barrels.size() + " barrels");
             }
             
-            // Criar multicast com os barrels disponíveis
-            tempMulticast = new ReliableMulticast(barrels);
-            System.out.println("✓ Reliable Multicast inicializado com " + barrels.size() + " barrels");
-            
         } catch (Exception e) {
-            System.err.println(" Aviso: Barrels não disponíveis, rodando sem RMI");
-            System.err.println("  Erro: " + e.getMessage());
+            System.err.println(" Erro no setup dos Barrels: " + e.getMessage());
         }
         
         this.multicast = tempMulticast;
@@ -68,22 +86,15 @@ public class Downloader {
         executorService = Executors.newFixedThreadPool(numWorkers);
         
         for (int i = 0; i < numWorkers; i++) {
+            // Passamos a referência remota da queue para os workers
             DownloaderWorker worker = new DownloaderWorker(i, urlQueue, robotsParser, multicast);
             workers.add(worker);
             executorService.submit(worker);
         }
-        
-        System.out.println("Downloaders iniciados!");
-    }
-    
-    public void addURL(String url) {
-        urlQueue.addURL(url);
     }
     
     public void shutdown() {
         System.out.println("Encerrando downloaders...");
-        robotsParser.printStats();
-        
         if (multicast != null) {
             System.out.println("Barrels ativos: " + multicast.getBarrelCount());
         }
@@ -94,35 +105,53 @@ public class Downloader {
         
         executorService.shutdown();
         try {
-            if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
+            if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
                 executorService.shutdownNow();
             }
         } catch (InterruptedException e) {
             executorService.shutdownNow();
         }
-        
-        System.out.println("Downloaders encerrados!");
-    }
-    
-    public URLQueue getUrlQueue() {
-        return urlQueue;
+        System.out.println("Fim.");
     }
     
     public static void main(String[] args) {
-        int numBarrels = 2; // ← CONFIGURAR: número de barrels
+        // Configurações
+        int numWorkers = 3;
+        int numBarrels = 2;
         
-        // Downloader COM MULTICAST para 2 barrels
-        Downloader downloader = new Downloader(3, "localhost", 1099, numBarrels);
+        String barrelHost = "localhost";
+        int barrelPort = 1099;
+        
+        String queueHost = "localhost";
+        int queuePort = 1098; // Porta diferente para a Queue
+        
+        System.out.println("=== INICIANDO DOWNLOADER ===");
+        
+        // Agora passamos TODOS os argumentos necessários
+        Downloader downloader = new Downloader(
+            numWorkers, 
+            barrelHost, barrelPort, 
+            numBarrels, 
+            queueHost, queuePort
+        );
         
         downloader.start();
         
-        // URLs de teste
-        downloader.addURL("https://www.uc.pt");
-        downloader.addURL("https://www.dei.uc.pt");
-        downloader.addURL("https://en.wikipedia.org/wiki/Web_crawler");
-        
+        // Opcional: Adicionar URL inicial (seed) para começar o trabalho
+        // Só deve ser feito se a fila estiver vazia, mas mal não faz
         try {
-            Thread.sleep(60000); // 60 segundos
+            System.out.println("Enviando seed URL...");
+            // Nota: Como addURL lança RemoteException, precisamos de try-catch
+            // Mas aqui no main não temos acesso direto fácil sem getters, 
+            // assumimos que os workers vão pedir URLs.
+            // Se quiseres adicionar manualmente aqui, precisarias de expor o urlQueue.
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        // Manter a correr por um tempo para teste
+        try {
+            Thread.sleep(120000); // 2 minutos
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

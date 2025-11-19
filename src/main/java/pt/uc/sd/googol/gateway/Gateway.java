@@ -77,16 +77,27 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     public List<String> getBacklinks(String url) throws RemoteException {
         System.out.println(" Obtendo backlinks de: " + url);
         
-        // Agregar backlinks de todos os barrels
+        // TRUQUE: Tentar variações se o original falhar
         Set<String> allBacklinks = new HashSet<>();
-        
-        for (BarrelInterface barrel : barrels) {
+        List<String> variations = new ArrayList<>();
+        variations.add(url);
+        if (!url.startsWith("http")) {
+            variations.add("https://" + url);
+            variations.add("https://www." + url);
+            variations.add("http://" + url);
+        }
+
+        for (String v : variations) {
+            // Como corrigimos a lógica no passo anterior, agora perguntamos apenas a 1 barrel
+            // Mas para garantir, usamos o teu método de load balancing
             try {
-                List<String> backlinks = barrel.getBacklinks(url);
-                allBacklinks.addAll(backlinks);
-            } catch (RemoteException e) {
-                System.err.println("⚠ Erro ao obter backlinks de um barrel: " + e.getMessage());
-            }
+                BarrelInterface barrel = getNextBarrel();
+                List<String> res = barrel.getBacklinks(v);
+                if (!res.isEmpty()) {
+                    allBacklinks.addAll(res);
+                    break; // Encontrou resultados numa das variações
+                }
+            } catch (Exception e) { /* ... */ }
         }
         
         return new ArrayList<>(allBacklinks);

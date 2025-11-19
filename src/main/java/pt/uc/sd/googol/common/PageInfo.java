@@ -4,12 +4,14 @@ import java.io.Serializable;
 import java.util.*;
 
 public class PageInfo implements Serializable {
+    private static final long serialVersionUID = 1L; // ← ADICIONAR
+    
     private final String url;
     private final String title;
     private final String citation;
     private final Set<String> words;
     private final List<String> links;
-    
+        
     public PageInfo(String url, String title, String citation, 
                     Set<String> words, List<String> links) {
         this.url = url;
