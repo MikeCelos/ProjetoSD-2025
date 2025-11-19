@@ -4,41 +4,59 @@ import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque; // <--- MUDANÇA 1: Importar Deque
 import java.util.concurrent.TimeUnit;
 
 public class URLQueue extends UnicastRemoteObject implements URLQueueInterface {
     
-    private final LinkedBlockingQueue<String> queue;
-    private final Set<String> visited; // URLs já visitados
-    private final Set<String> queued;  // URLs já na fila
+    // MUDANÇA 2: Mudar o tipo da variável para LinkedBlockingDeque
+    private final LinkedBlockingDeque<String> queue;
+    
+    private final Set<String> visited;
+    private final Set<String> queued;
     
     public URLQueue() throws RemoteException {
         super();
-        this.queue = new LinkedBlockingQueue<>();
+        // MUDANÇA 3: Instanciar como LinkedBlockingDeque
+        this.queue = new LinkedBlockingDeque<>();
         this.visited = ConcurrentHashMap.newKeySet();
         this.queued = ConcurrentHashMap.newKeySet();
     }
     
     @Override
     public synchronized void addURL(String url) throws RemoteException {
-        // Normalização básica
         if (url == null) return;
         url = url.trim();
         if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
 
-        // Não adicionar se já foi visitado ou já está na fila
         if (!visited.contains(url) && !queued.contains(url)) {
-            queue.offer(url);
+            queue.offer(url); // Adiciona ao fim (comportamento normal)
             queued.add(url);
             System.out.println(" [Queue] + Adicionado: " + url);
         }
     }
     
     @Override
+    public synchronized void addTopPriorityURL(String url) throws RemoteException {
+        if (visited.contains(url)) {
+            System.out.println(" [Queue] ! URL já visitado, ignorando prioridade: " + url);
+            return;
+        }
+        
+        if (!queued.contains(url)) {
+            // AGORA JÁ FUNCIONA: LinkedBlockingDeque tem este método
+            queue.offerFirst(url); 
+            queued.add(url);
+            System.out.println(" [Queue] +++ Adicionado (PRIORIDADE MÁXIMA): " + url);
+        } else {
+             System.out.println(" [Queue] URL já estava na fila (não movido).");
+        }
+    }
+    
+    @Override
     public String getNextURL() throws RemoteException {
         try {
-            // Espera até 2 segundos por um URL
+            // Poll tira do início da fila (funciona igual no Deque)
             String url = queue.poll(2, TimeUnit.SECONDS);
             if (url != null) {
                 queued.remove(url);
@@ -54,10 +72,8 @@ public class URLQueue extends UnicastRemoteObject implements URLQueueInterface {
     @Override
     public synchronized void markAsVisited(String url) throws RemoteException {
         if (url != null) {
-            // Normalização para garantir match
             url = url.trim();
             if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
-            
             visited.add(url);
         }
     }

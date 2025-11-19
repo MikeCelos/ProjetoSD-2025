@@ -30,4 +30,6 @@ public interface GatewayInterface extends Remote {
      * Testa se o gateway está ativo
      */
     String ping() throws RemoteException;
+
+    boolean indexUrl(String url) throws RemoteException;
 }

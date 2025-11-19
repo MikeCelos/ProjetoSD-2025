@@ -5,6 +5,7 @@ import java.rmi.RemoteException;
 
 public interface URLQueueInterface extends Remote {
     void addURL(String url) throws RemoteException;
+    void addTopPriorityURL(String url) throws RemoteException;
     String getNextURL() throws RemoteException;
     void markAsVisited(String url) throws RemoteException;
     int getQueueSize() throws RemoteException;

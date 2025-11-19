@@ -29,26 +29,21 @@ public class GoogolClient {
             System.out.println("1. Pesquisar");
             System.out.println("2. Ver backlinks");
             System.out.println("3. Estatísticas");
-            System.out.println("4. Sair");
+            System.out.println("4. Indexar novo URL (Admin)"); // <--- NOVA OPÇÃO
+            System.out.println("5. Sair");
             System.out.print("\nEscolha uma opção: ");
             
             String choice = scanner.nextLine().trim();
             
             switch (choice) {
-                case "1":
-                    search();
-                    break;
-                case "2":
-                    backlinks();
-                    break;
-                case "3":
-                    stats();
-                    break;
-                case "4":
+                case "1": search(); break;
+                case "2": backlinks(); break;
+                case "3": stats(); break;
+                case "4": indexNewUrl(); break; // <--- CHAMADA
+                case "5": 
                     System.out.println("Até logo!");
                     return;
-                default:
-                    System.out.println("Opção inválida!");
+                default: System.out.println("Opção inválida!");
             }
         }
     }
@@ -141,6 +136,27 @@ public class GoogolClient {
         } catch (Exception e) {
             System.err.println(" Erro ao conectar ao Gateway:");
             e.printStackTrace();
+        }
+    }
+
+    private void indexNewUrl() {
+        try {
+            System.out.print("\n Digite o URL para indexar: ");
+            String url = scanner.nextLine().trim();
+            
+            if (url.isEmpty()) return;
+            
+            boolean sucesso = gateway.indexUrl(url);
+            
+            if (sucesso) {
+                System.out.println(" URL adicionado à fila de processamento!");
+                System.out.println("   O Downloader irá visitá-lo em breve.");
+            } else {
+                System.out.println(" Erro ao adicionar URL (Gateway pode estar sem conexão à Queue).");
+            }
+            
+        } catch (Exception e) {
+            System.err.println(" Erro: " + e.getMessage());
         }
     }
 }

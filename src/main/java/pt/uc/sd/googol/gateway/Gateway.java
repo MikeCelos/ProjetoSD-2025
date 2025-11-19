@@ -1,12 +1,15 @@
 package pt.uc.sd.googol.gateway;
 
 import pt.uc.sd.googol.barrel.BarrelInterface;
+import pt.uc.sd.googol.downloader.URLQueueInterface;
+
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 public class Gateway extends UnicastRemoteObject implements GatewayInterface {
@@ -17,21 +20,69 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     // Cache de resultados (termo + página -> resultados)
     private final Map<String, CachedResult> searchCache;
     private static final long CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+    // Referência para a Queue (para indexar novos URLs)
+    private final URLQueueInterface urlQueue;
     
-    protected Gateway(List<BarrelInterface> barrels) throws RemoteException {
+    // Estatísticas
+    private final Map<String, Integer> searchCounts; // Top 10 pesquisas
+    private final Map<Integer, List<Long>> responseTimes; // Tempos por barrel
+    
+    // CORREÇÃO AQUI: 'protected' estava escrito 'pprotected'
+    protected Gateway(List<BarrelInterface> barrels, URLQueueInterface urlQueue) throws RemoteException {
         super();
         this.barrels = barrels;
         this.searchCache = new ConcurrentHashMap<>();
+        this.searchCounts = new ConcurrentHashMap<>();
+        this.responseTimes = new ConcurrentHashMap<>();
+        this.urlQueue = urlQueue;
+        
+        // Inicializar lista de tempos para cada barrel
+        for (int i = 0; i < barrels.size(); i++) {
+            responseTimes.put(i, new CopyOnWriteArrayList<>());
+        }
+        
         System.out.println(" Gateway inicializado com " + barrels.size() + " barrels");
     }
-    
+
+    @Override
+    public boolean indexUrl(String url) throws RemoteException {
+        System.out.println(" Pedido de indexação recebido: " + url);
+        if (urlQueue == null) {
+            System.err.println(" Erro: Queue não disponível.");
+            return false;
+        }
+        
+        try {
+            // Validação básica
+            if (!url.startsWith("http")) {
+                url = "https://" + url;
+            }
+            
+            urlQueue.addTopPriorityURL(url);
+            System.out.println(" URL enviado para a Queue com sucesso.");
+            return true;
+        } catch (RemoteException e) {
+            System.err.println(" Erro ao contactar a Queue: " + e.getMessage());
+            return false;
+        }
+    }
+
     @Override
     public List<SearchResult> search(List<String> terms, int page) throws RemoteException {
         if (terms == null || terms.isEmpty()) {
             return new ArrayList<>();
         }
         
-        // Normalizar termos
+        // 1. Atualizar Estatísticas (Top 10)
+        for (String term : terms) {
+            String lowerTerm = term.toLowerCase().trim();
+            if (!lowerTerm.isEmpty()) {
+                searchCounts.merge(lowerTerm, 1, Integer::sum);
+            }
+        }
+        
+        // Normalizar termos para pesquisa
         List<String> normalizedTerms = terms.stream()
             .map(String::toLowerCase)
             .map(String::trim)
@@ -39,7 +90,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         
         String cacheKey = normalizedTerms.toString() + ":" + page;
         
-        // Verificar cache
+        // 2. Verificar cache
         CachedResult cached = searchCache.get(cacheKey);
         if (cached != null && !cached.isExpired()) {
             System.out.println(" Cache hit: " + cacheKey);
@@ -49,25 +100,32 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         System.out.println(" Pesquisando: " + normalizedTerms + " (página " + page + ")");
         
         // Escolher barrel (round-robin)
+        int barrelIdx = currentBarrelIndex; // Guardar índice localmente para stats
         BarrelInterface barrel = getNextBarrel();
         
+        long startTime = System.currentTimeMillis();
+        
         try {
-            // Pesquisar no barrel escolhido
+            // 3. Pesquisar no barrel escolhido
             List<SearchResult> results = barrel.search(normalizedTerms, page);
+            
+            // 4. Registar tempo de resposta para estatísticas
+            long duration = System.currentTimeMillis() - startTime;
+            responseTimes.computeIfAbsent(barrelIdx, k -> new CopyOnWriteArrayList<>()).add(duration);
             
             // Guardar em cache
             searchCache.put(cacheKey, new CachedResult(results));
             
-            System.out.println(" Encontrados " + results.size() + " resultados");
+            System.out.println(" Encontrados " + results.size() + " resultados em " + duration + "ms (Barrel " + barrelIdx + ")");
             return results;
             
         } catch (RemoteException e) {
             System.err.println(" Erro ao pesquisar no barrel: " + e.getMessage());
             
-            // Tentar com outro barrel
+            // Tentar com outro barrel (Failover)
             removeBarrel(barrel);
             if (!barrels.isEmpty()) {
-                return search(terms, page); // Retry com outro barrel
+                return search(terms, page); // Retry recursivo
             }
             throw e;
         }
@@ -77,30 +135,44 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     public List<String> getBacklinks(String url) throws RemoteException {
         System.out.println(" Obtendo backlinks de: " + url);
         
-        // TRUQUE: Tentar variações se o original falhar
-        Set<String> allBacklinks = new HashSet<>();
+        // OTIMIZAÇÃO: Consultar apenas 1 barrel (Replicas têm os mesmos dados)
+        // TRUQUE: Tentar variações de URL para aumentar probabilidade de match
         List<String> variations = new ArrayList<>();
         variations.add(url);
+        
         if (!url.startsWith("http")) {
             variations.add("https://" + url);
             variations.add("https://www." + url);
             variations.add("http://" + url);
         }
+        if (url.endsWith("/")) {
+            variations.add(url.substring(0, url.length() - 1));
+        } else {
+            variations.add(url + "/");
+        }
 
-        for (String v : variations) {
-            // Como corrigimos a lógica no passo anterior, agora perguntamos apenas a 1 barrel
-            // Mas para garantir, usamos o teu método de load balancing
+        // Tentar obter de um barrel (com failover)
+        int attempts = 0;
+        while (attempts < barrels.size()) {
+            BarrelInterface barrel = getNextBarrel();
             try {
-                BarrelInterface barrel = getNextBarrel();
-                List<String> res = barrel.getBacklinks(v);
-                if (!res.isEmpty()) {
-                    allBacklinks.addAll(res);
-                    break; // Encontrou resultados numa das variações
+                for (String v : variations) {
+                    List<String> res = barrel.getBacklinks(v);
+                    if (!res.isEmpty()) {
+                        System.out.println(" Encontrados backlinks para variação: " + v);
+                        return res;
+                    }
                 }
-            } catch (Exception e) { /* ... */ }
+                return new ArrayList<>(); // Se correu variações e não encontrou nada
+                
+            } catch (RemoteException e) {
+                System.err.println(" Erro no barrel (backlinks). Tentando outro...");
+                removeBarrel(barrel);
+                attempts++;
+            }
         }
         
-        return new ArrayList<>(allBacklinks);
+        throw new RemoteException("Nenhum barrel disponível para backlinks");
     }
     
     @Override
@@ -110,14 +182,33 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         stats.append("Barrels ativos: ").append(barrels.size()).append("\n");
         stats.append("Entradas em cache: ").append(searchCache.size()).append("\n\n");
         
-        // Estatísticas de cada barrel
+        // TOP 10 Pesquisas
+        stats.append("--- Top 10 Pesquisas ---\n");
+        searchCounts.entrySet().stream()
+            .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // Ordem decrescente
+            .limit(10)
+            .forEach(entry -> stats.append(String.format(" '%s': %d vezes\n", entry.getKey(), entry.getValue())));
+            
+        stats.append("\n--- Tempos Médios de Resposta ---\n");
+        // Tempos médios por Barrel
+        for (Map.Entry<Integer, List<Long>> entry : responseTimes.entrySet()) {
+            int id = entry.getKey();
+            List<Long> times = entry.getValue();
+            if (times.isEmpty()) {
+                stats.append(" Barrel ").append(id).append(": Sem dados\n");
+            } else {
+                double avg = times.stream().mapToLong(Long::longValue).average().orElse(0.0);
+                stats.append(String.format(" Barrel %d: %.2f ms (%d pedidos)\n", id, avg, times.size()));
+            }
+        }
+        
+        stats.append("\n--- Status dos Barrels ---\n");
         for (int i = 0; i < barrels.size(); i++) {
             try {
                 String barrelStats = barrels.get(i).getStats();
-                stats.append("Barrel ").append(i).append(":\n");
                 stats.append(barrelStats).append("\n");
             } catch (RemoteException e) {
-                stats.append("Barrel ").append(i).append(": ERROR\n");
+                stats.append("Barrel ").append(i).append(": OFFLINE\n");
             }
         }
         
@@ -129,22 +220,18 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         return "Gateway OK - " + barrels.size() + " barrels disponíveis";
     }
 
-        /**
-     * Remove entradas expiradas do cache
-     */
     private void cleanExpiredCache() {
-        int before = searchCache.size();
         searchCache.entrySet().removeIf(entry -> entry.getValue().isExpired());
-        int removed = before - searchCache.size();
-        if (removed > 0) {
-            System.out.println(" Cache limpo: " + removed + " entradas removidas");
-        }
     }
     
     // Load balancing - Round Robin
     private synchronized BarrelInterface getNextBarrel() throws RemoteException {
         if (barrels.isEmpty()) {
             throw new RemoteException("Nenhum barrel disponível");
+        }
+        // Garantir que índice é válido (caso barrels tenham sido removidos)
+        if (currentBarrelIndex >= barrels.size()) {
+            currentBarrelIndex = 0;
         }
         
         BarrelInterface barrel = barrels.get(currentBarrelIndex);
@@ -172,62 +259,46 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
     }
     
-    // ===== MAIN - Iniciar Gateway =====
+    // ===== MAIN =====
     public static void main(String[] args) {
         try {
             int gatewayPort = 1100;
             int barrelPort = 1099;
-            int numBarrels = 2; // ← Configurar número de barrels
+            int queuePort = 1098; // <--- Porta da Queue
+            int numBarrels = 2; 
             
-            // Conectar aos barrels
+            // 1. Conectar aos Barrels (Igual ao anterior)
             List<BarrelInterface> barrels = new ArrayList<>();
             Registry barrelRegistry = LocateRegistry.getRegistry("localhost", barrelPort);
-            
-            System.out.println(" Procurando " + numBarrels + " barrels...");
-            
             for (int i = 0; i < numBarrels; i++) {
                 try {
-                    String barrelName = "barrel" + i; // ← SEMPRE barrel0, barrel1, barrel2...
-                    BarrelInterface barrel = (BarrelInterface) barrelRegistry.lookup(barrelName);
-                    barrel.ping(); // Testar conexão
+                    BarrelInterface barrel = (BarrelInterface) barrelRegistry.lookup("barrel" + i);
                     barrels.add(barrel);
-                    System.out.println("✓ Conectado ao " + barrelName);
-                } catch (Exception e) {
-                    System.err.println("⚠ Não foi possível conectar ao barrel" + i + ": " + e.getMessage());
-                }
+                } catch (Exception e) { /* Log erro */ }
             }
             
-            if (barrels.isEmpty()) {
-                throw new Exception("Nenhum barrel disponível!");
+            // 2. Conectar à Queue (NOVO)
+            URLQueueInterface queue = null;
+            try {
+                Registry queueRegistry = LocateRegistry.getRegistry("localhost", queuePort);
+                queue = (URLQueueInterface) queueRegistry.lookup("queue");
+                System.out.println("✓ Conectado à URL Queue");
+            } catch (Exception e) {
+                System.err.println("⚠ AVISO: Não foi possível conectar à Queue. Indexação manual indisponível.");
             }
-            
-            // Criar registry do gateway
+
+            // 3. Iniciar Gateway
             Registry gatewayRegistry = LocateRegistry.createRegistry(gatewayPort);
-            Gateway gateway = new Gateway(barrels);
+            // Passamos a queue para o construtor
+            Gateway gateway = new Gateway(barrels, queue); 
             gatewayRegistry.rebind("gateway", gateway);
             
             System.out.println(" Gateway rodando na porta " + gatewayPort);
-            System.out.println(" Conectado a " + barrels.size() + " barrel(s)");
             
-            // Thread para limpar cache periodicamente
-            new Thread(() -> {
-                while (true) {
-                    try {
-                        Thread.sleep(60000); // 1 minuto
-                        gateway.cleanExpiredCache();
-                    } catch (InterruptedException e) {
-                        break;
-                    }
-                }
-            }).start();
-            
-            // Manter vivo
-            while (true) {
-                Thread.sleep(1000);
-            }
+            // Manter vivo...
+            while(true) Thread.sleep(1000);
             
         } catch (Exception e) {
-            System.err.println("Erro ao iniciar Gateway:");
             e.printStackTrace();
         }
     }
