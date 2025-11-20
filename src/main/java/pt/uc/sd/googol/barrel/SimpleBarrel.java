@@ -17,128 +17,155 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
     private final int barrelId;
     private final String dataFileName;
     
-    private Map<String, PageInfo> pages;
-    private Map<String, Set<String>> index;
-    private Map<String, Set<String>> backlinks;
+    // Mapas iniciados imediatamente para evitar NullPointer
+    private final Map<String, PageInfo> pages = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> index = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> backlinks = new ConcurrentHashMap<>();
+    
+    // Flag de segurança para evitar gravar dados incompletos
+    private volatile boolean isReady = false;
     
     protected SimpleBarrel(int barrelId) throws RemoteException {
         super();
         this.barrelId = barrelId;
         this.dataFileName = "barrel" + barrelId + ".dat";
         
-        // Tentar sincronizar ou carregar
-        if (!syncFromPeer() && !loadFromDisk()) {
-            this.pages = new ConcurrentHashMap<>();
-            this.index = new ConcurrentHashMap<>();
-            this.backlinks = new ConcurrentHashMap<>();
-            System.out.println(" [Barrel" + barrelId + "] Iniciado VAZIO.");
-        }
+        // Thread de Inicialização (Sync + Load)
+        new Thread(() -> {
+            System.out.println(" [Barrel" + barrelId + "] A iniciar processo de recuperação...");
+            
+            // 1. Tentar Sincronizar de outro par (P2P)
+            boolean synced = syncFromPeer();
+            
+            // 2. Se a sincronização falhar, tentar ler do disco local
+            if (!synced) {
+                loadFromDisk();
+            }
+            
+            // Marcar como pronto! A partir de agora podemos gravar em disco.
+            isReady = true;
+            System.out.println(" [Barrel" + barrelId + "] ESTADO: ONLINE E PRONTO (Total: " + pages.size() + " páginas)");
+            
+            // Forçar uma gravação imediata para garantir consistência
+            saveToDisk();
+            
+        }).start();
 
-        // Thread de Auto-Save
+        // Thread de Auto-Save (a cada 10s)
         new Thread(() -> {
             while (true) {
                 try {
                     Thread.sleep(10000);
-                    saveToDisk();
+                    if (isReady) saveToDisk(); // Só grava se estiver pronto
                 } catch (InterruptedException e) { break; }
             }
         }).start();
         
-        Runtime.getRuntime().addShutdownHook(new Thread(this::saveToDisk));
+        // Shutdown Hook
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (isReady) saveToDisk();
+        }));
     }
 
-    // --- Lógica de Sincronização (State Transfer) ---
     private boolean syncFromPeer() {
-        System.out.println(" [Sync] Procurando outro barrel para sincronizar...");
         try {
             Registry registry = LocateRegistry.getRegistry(1099);
             String[] list = registry.list();
             
             for (String name : list) {
-                // Procura barrels que não sejam "eu próprio"
                 if (name.startsWith("barrel") && !name.equals("barrel" + barrelId)) {
                     try {
                         System.out.println(" [Sync] Tentando copiar de " + name + "...");
                         BarrelInterface peer = (BarrelInterface) registry.lookup(name);
                         
-                        // Pede os dados todos (pode demorar se for muita coisa)
                         SyncData data = peer.getFullState();
-                        
-                        this.pages = new ConcurrentHashMap<>(data.pages);
-                        this.index = new ConcurrentHashMap<>(data.index);
-                        this.backlinks = new ConcurrentHashMap<>(data.backlinks);
-                        
-                        System.out.println(" [Sync] SUCESSO! Copiado de " + name);
-                        System.out.println("   -> Páginas: " + pages.size());
-                        saveToDisk(); // Guarda logo em disco
-                        return true;
-                        
+                        if (data != null) {
+                            // USAR putAll PARA NÃO PERDER DADOS RECEBIDOS VIA MULTICAST DURANTE O ARRANQUE
+                            this.pages.putAll(data.pages);
+                            this.index.putAll(data.index);
+                            this.backlinks.putAll(data.backlinks);
+                            
+                            System.out.println(" [Sync] SUCESSO! Sincronizado com " + name);
+                            return true;
+                        }
                     } catch (Exception e) {
-                        System.err.println(" [Sync] Falha ao copiar de " + name + ": " + e.getMessage());
+                        System.err.println(" [Sync] Falha ao copiar de " + name + " (tentando próximo...)");
                     }
                 }
             }
-        } catch (Exception e) {
-            // Registry pode não estar acessível ainda
-        }
-        System.out.println(" [Sync] Nenhum parceiro disponível.");
+        } catch (Exception e) { }
+        System.out.println(" [Sync] Nenhum par disponível para sincronização.");
         return false;
     }
 
-    // --- Implementação do método remoto para fornecer dados ---
     @Override
     public SyncData getFullState() throws RemoteException {
-        System.out.println(" [Sync] Recebi pedido de sincronização. Enviando dados...");
         // Retorna cópia dos dados atuais
-        return new SyncData(pages, index, backlinks);
+        return new SyncData(new HashMap<>(pages), new HashMap<>(index), new HashMap<>(backlinks));
     }
 
-    // --- Persistência em Disco (Backup) ---
     private synchronized void saveToDisk() {
+        // SEGURANÇA: Nunca gravar se ainda estamos a carregar!
+        // Isto impede que um barrel vazio grave um ficheiro vazio por cima do backup.
+        if (!isReady) return;
+
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(dataFileName))) {
             oos.writeObject(pages);
             oos.writeObject(index);
             oos.writeObject(backlinks);
         } catch (IOException e) {
-            System.err.println(" Erro ao gravar disco: " + e.getMessage());
+            System.err.println(" [Disk] Erro ao gravar: " + e.getMessage());
         }
     }
     
     @SuppressWarnings("unchecked")
-    private boolean loadFromDisk() {
+    private void loadFromDisk() {
         File file = new File(dataFileName);
-        if (!file.exists()) return false;
+        if (!file.exists()) {
+            System.out.println(" [Disk] Nenhum ficheiro local encontrado.");
+            return;
+        }
         
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
-            this.pages = (ConcurrentHashMap<String, PageInfo>) ois.readObject();
-            this.index = (ConcurrentHashMap<String, Set<String>>) ois.readObject();
-            this.backlinks = (ConcurrentHashMap<String, Set<String>>) ois.readObject();
-            System.out.println(" [Disk] Dados recuperados do disco.");
-            return true;
+            Map<String, PageInfo> p = (Map<String, PageInfo>) ois.readObject();
+            Map<String, Set<String>> i = (Map<String, Set<String>>) ois.readObject();
+            Map<String, Set<String>> b = (Map<String, Set<String>>) ois.readObject();
+            
+            // Usar putAll também aqui
+            this.pages.putAll(p);
+            this.index.putAll(i);
+            this.backlinks.putAll(b);
+            
+            System.out.println(" [Disk] Dados carregados do disco com sucesso.");
         } catch (Exception e) {
             System.err.println(" [Disk] Erro ao ler ficheiro: " + e.getMessage());
-            return false;
         }
     }
 
-    // ... MÉTODOS search, addDocument, etc. IGUAIS AO ANTERIOR ...
+    // --- Métodos Remotos ---
     @Override
     public void addDocument(PageInfo page) throws RemoteException {
         pages.put(page.getUrl(), page);
+        
+        // Indexação manual para garantir thread-safety nos Sets internos
         for (String word : page.getWords()) {
             index.computeIfAbsent(word, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
         }
         for (String link : page.getLinks()) {
             backlinks.computeIfAbsent(link, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
         }
-        System.out.println(" [Barrel" + barrelId + "] Indexado: " + page.getUrl());
+        
+        // Feedback visual reduzido para não poluir logs
+        if (pages.size() % 10 == 0) { 
+            System.out.println(" [Barrel" + barrelId + "] Total: " + pages.size());
+        }
     }
 
     @Override
     public List<SearchResult> search(List<String> terms, int page) throws RemoteException {
         if (terms.isEmpty()) return new ArrayList<>();
-        
         Set<String> resultUrls = null;
+        
         for (String term : terms) {
             Set<String> urls = index.getOrDefault(term.toLowerCase(), Collections.emptySet());
             if (resultUrls == null) resultUrls = new HashSet<>(urls);
@@ -179,12 +206,4 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
 
     @Override
     public String ping() throws RemoteException { return "PONG"; }
-    
-    public static void main(String[] args) {
-        try {
-            // Se usado sem Launcher
-            Registry r = LocateRegistry.createRegistry(1099);
-            r.rebind("barrel0", new SimpleBarrel(0));
-        } catch (Exception e) {}
-    }
 }
