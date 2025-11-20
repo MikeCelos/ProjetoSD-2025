@@ -16,4 +16,6 @@ public interface BarrelInterface extends Remote {
     String getStats() throws RemoteException;
     
     String ping() throws RemoteException;
+    
+    SyncData getFullState() throws RemoteException;
 }

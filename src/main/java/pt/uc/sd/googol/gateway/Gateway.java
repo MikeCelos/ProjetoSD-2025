@@ -205,10 +205,31 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         stats.append("\n--- Status dos Barrels ---\n");
         for (int i = 0; i < barrels.size(); i++) {
             try {
+                // Tenta falar com o barrel atual
                 String barrelStats = barrels.get(i).getStats();
                 stats.append(barrelStats).append("\n");
+                
             } catch (RemoteException e) {
-                stats.append("Barrel ").append(i).append(": OFFLINE\n");
+                // Se falhar, o Barrel pode ter reiniciado. Vamos tentar reconectar!
+                try {
+                    System.out.println(" [Gateway] Barrel " + i + " não responde. Tentando reconectar...");
+                    
+                    // 1. Procurar no Registry novamente
+                    Registry registry = LocateRegistry.getRegistry(1099); // Porta padrão
+                    BarrelInterface newBarrelRef = (BarrelInterface) registry.lookup("barrel" + i);
+                    
+                    // 2. Atualizar a lista do Gateway com o "novo número de telefone"
+                    barrels.set(i, newBarrelRef);
+                    
+                    // 3. Tentar pedir estatísticas novamente
+                    stats.append(newBarrelRef.getStats()).append(" (Reconectado)\n");
+                    System.out.println(" [Gateway] ✓ Reconexão bem-sucedida ao Barrel " + i);
+                    
+                } catch (Exception ex) {
+                    // Se mesmo tentando reconectar falhar, então está mesmo morto
+                    stats.append("Barrel ").append(i).append(": OFFLINE (Incontactável)\n");
+                    // System.err.println(" [Gateway] Falha na reconexão: " + ex.getMessage());
+                }
             }
         }
         

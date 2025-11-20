@@ -1,5 +1,6 @@
 pt/uc/sd/googol/downloader/QueueServer.class
 pt/uc/sd/googol/barrel/SimpleBarrel.class
+pt/uc/sd/googol/barrel/SyncData.class
 pt/uc/sd/googol/downloader/DownloaderWorker.class
 pt/uc/sd/googol/gateway/GatewayInterface.class
 pt/uc/sd/googol/barrel/BarrelLauncher.class
