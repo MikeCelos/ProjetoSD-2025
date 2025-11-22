@@ -1,5 +1,5 @@
-pt/uc/sd/googol/downloader/QueueServer.class
 pt/uc/sd/googol/barrel/SimpleBarrel.class
+pt/uc/sd/googol/downloader/QueueServer.class
 pt/uc/sd/googol/barrel/SyncData.class
 pt/uc/sd/googol/downloader/DownloaderWorker.class
 pt/uc/sd/googol/gateway/GatewayInterface.class
@@ -9,11 +9,13 @@ pt/uc/sd/googol/downloader/URLQueueInterface.class
 pt/uc/sd/googol/barrel/BarrelInterface.class
 pt/uc/sd/googol/downloader/RobotsTxtParser.class
 pt/uc/sd/googol/client/GoogolClient.class
+pt/uc/sd/googol/web/WebController.class
+pt/uc/sd/googol/GoogolWebApplication.class
+pt/uc/sd/googol/multicast/ReliableMulticast.class
 pt/uc/sd/googol/downloader/URLQueue.class
 pt/uc/sd/googol/gateway/Gateway.class
-pt/uc/sd/googol/multicast/ReliableMulticast.class
 pt/uc/sd/googol/downloader/RobotsTxtParser$RobotRules.class
-pt/uc/sd/googol/common/PageInfo.class
 pt/uc/sd/googol/multicast/ReliableMulticast$MulticastResult.class
+pt/uc/sd/googol/common/PageInfo.class
 pt/uc/sd/googol/gateway/Gateway$CachedResult.class
 pt/uc/sd/googol/gateway/SearchResult.class

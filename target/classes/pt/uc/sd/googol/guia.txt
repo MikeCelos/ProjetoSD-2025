@@ -1,7 +1,0 @@
-executar nesta ordem 
-java -cp target/classes pt.uc.sd.googol.barrel.BarrelLauncher 0
-java -cp target/classes pt.uc.sd.googol.barrel.BarrelLauncher 1
-java -cp target/classes pt.uc.sd.googol.downloader.QueueServer
-java -cp target/classes pt.uc.sd.googol.gateway.Gateway
-mvn exec:java -Dexec.mainClass="pt.uc.sd.googol.downloader.Downloader"
-java -cp target/classes pt.uc.sd.googol.client.GoogolClient

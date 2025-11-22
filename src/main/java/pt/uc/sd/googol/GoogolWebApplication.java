@@ -1,0 +1,13 @@
+package pt.uc.sd.googol;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class GoogolWebApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(GoogolWebApplication.class, args);
+    }
+}
+

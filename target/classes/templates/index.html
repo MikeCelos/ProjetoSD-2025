@@ -73,8 +73,7 @@
            width: 64px;
             height: 64px;
             border-radius: 20px;
-            background-image: url("../static/img/logo_bw_circular.png");
-            /* ou ../static/img/logo.png */
+            background-image: url("/img/logo_bw_circular.png");
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -598,7 +597,7 @@
                         <div class="result-title-row">
                             <h2 class="result-title" th:text="${r.title}">Título da página</h2>
                             <span class="result-score"
-                                  th:text="'Score: ' + ${r.score}">
+                                    th:text="'Score: ' + ${r.relevance}">
                                 Score: 0
                             </span>
                         </div>
