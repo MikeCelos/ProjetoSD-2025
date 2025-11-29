@@ -24,7 +24,7 @@ public class HackerNewsService {
             return 0;
         }
 
-        System.out.println("🔍 Consultando Hacker News para: " + query);
+        System.out.println(" Consultando Hacker News para: " + query);
         
         // 1. Obter lista de IDs das Top Stories
         String idsUrl = "https://hacker-news.firebaseio.com/v0/topstories.json";
