@@ -1,4 +1,4 @@
-package pt.uc.sd.googol.web;
+package pt.uc.sd.googol.web; // <--- Confirma este package!
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

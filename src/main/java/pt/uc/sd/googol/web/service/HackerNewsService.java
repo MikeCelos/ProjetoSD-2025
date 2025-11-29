@@ -34,8 +34,8 @@ public class HackerNewsService {
 
         int countIndexed = 0;
 
-        // 2. Buscar detalhes dos primeiros 20 items (limitado para não ser lento)
-        for (int i = 0; i < 20 && i < topIds.length; i++) {
+        // 2. Buscar detalhes dos primeiros 50  items (limitado para não ser lento)
+        for (int i = 0; i < 50 && i < topIds.length; i++) {
             String itemUrl = "https://hacker-news.firebaseio.com/v0/item/" + topIds[i] + ".json";
             
             try {

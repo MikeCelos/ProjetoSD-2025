@@ -17,7 +17,7 @@ public class RmiConfig {
             Registry registry = LocateRegistry.getRegistry("localhost", 1100);
             return (GatewayInterface) registry.lookup("gateway");
         } catch (Exception e) {
-            System.err.println("❌ Erro ao conectar ao Gateway RMI: " + e.getMessage());
+            System.err.println(" Erro ao conectar ao Gateway RMI: " + e.getMessage());
             return null; // A aplicação Web arranca, mas sem RMI
         }
     }

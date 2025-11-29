@@ -18,11 +18,12 @@ public class OllamaService {
     
     // URL da API local do Ollama
     private final String OLLAMA_API_URL = "http://127.0.0.1:11434/api/generate";
-    // O modelo que tens instalado (confirma se tens o gemma2, llama3, etc.)
-    private final String MODEL_NAME = "gemma2:2b"; 
+    
+    // O modelo que tens instalado (gemma3:270m)
+    private final String MODEL_NAME = "gemma3:270m"; 
 
     /**
-     * Gera texto e devolve como String única (para usar no HTML)
+     * Gera texto e devolve como String única
      */
     public String generateText(String prompt) {
         try {
@@ -30,7 +31,7 @@ public class OllamaService {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", MODEL_NAME);
             requestBody.put("prompt", prompt);
-            requestBody.put("stream", false); // Importante: false para receber tudo de uma vez
+            requestBody.put("stream", false);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -50,7 +51,7 @@ public class OllamaService {
 
         } catch (Exception e) {
             System.err.println("Erro no Ollama: " + e.getMessage());
-            return "Erro ao gerar análise: Verifique se o Ollama está a correr.";
+            return "Erro ao gerar análise: " + e.getMessage();
         }
     }
 }
