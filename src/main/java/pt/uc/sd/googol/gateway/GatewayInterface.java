@@ -32,4 +32,6 @@ public interface GatewayInterface extends Remote {
     String ping() throws RemoteException;
 
     boolean indexUrl(String url) throws RemoteException;
+
+    int getQueueSize() throws RemoteException;
 }

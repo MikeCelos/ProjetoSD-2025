@@ -264,6 +264,18 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         barrels.remove(barrel);
         System.err.println(" Barrel removido. Restantes: " + barrels.size());
     }
+
+    @Override
+    public int getQueueSize() throws RemoteException {
+        if (urlQueue != null) {
+            try {
+                return urlQueue.getQueueSize();
+            } catch (RemoteException e) {
+                System.err.println(" Erro ao ler tamanho da fila: " + e.getMessage());
+            }
+        }
+        return 0;
+    }
     
     // Classe interna para cache
     private static class CachedResult {
