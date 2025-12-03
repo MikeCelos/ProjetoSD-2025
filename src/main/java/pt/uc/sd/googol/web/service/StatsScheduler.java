@@ -49,7 +49,11 @@ public class StatsScheduler {
                 // Ignora erros momentâneos
             }
             stats.put("queueSize", currentQueueSize);
-            stats.put("downloadersActive", 0); 
+            int downloaders = 0;
+            try {
+                downloaders = gateway.getActiveDownloaders();
+            } catch (Exception e) {}
+            stats.put("downloadersActive", downloaders);
 
             // Top Queries
             List<String> topQueries = new ArrayList<>();
@@ -67,7 +71,6 @@ public class StatsScheduler {
             }
             stats.put("barrelLatencies", latencies);
 
-            // 3. Enviar para o tópico (MUITO MAIS SIMPLES AGORA)
             if (template != null) {
                 template.convertAndSend("/topic/stats", stats);
             }

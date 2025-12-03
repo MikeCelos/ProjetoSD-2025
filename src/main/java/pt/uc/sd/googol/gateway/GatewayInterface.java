@@ -34,4 +34,6 @@ public interface GatewayInterface extends Remote {
     boolean indexUrl(String url) throws RemoteException;
 
     int getQueueSize() throws RemoteException;
+
+    public int getActiveDownloaders() throws RemoteException;
 }

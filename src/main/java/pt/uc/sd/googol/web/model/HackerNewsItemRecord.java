@@ -15,7 +15,7 @@ public class HackerNewsItemRecord {
     private String parent;
     private Integer poll;
     private List<Integer> kids;
-    private String url;        // <--- Este é o campo que nos interessa!
+    private String url;        
     private Integer score;
     private String title;
     private List<Integer> parts;

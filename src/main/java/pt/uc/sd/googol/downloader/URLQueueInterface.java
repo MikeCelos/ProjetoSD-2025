@@ -11,4 +11,7 @@ public interface URLQueueInterface extends Remote {
     int getQueueSize() throws RemoteException;
     int getVisitedCount() throws RemoteException;
     String ping() throws RemoteException;
+    void registerDownloader() throws RemoteException;
+    void unregisterDownloader() throws RemoteException;
+    int getActiveDownloaders() throws RemoteException;
 }

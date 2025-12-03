@@ -4,17 +4,19 @@ import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingDeque; // <--- MUDANÇA 1: Importar Deque
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class URLQueue extends UnicastRemoteObject implements URLQueueInterface {
-    
-    // MUDANÇA 2: Mudar o tipo da variável para LinkedBlockingDeque
+
     private final LinkedBlockingDeque<String> queue;
     
     private final Set<String> visited;
     private final Set<String> queued;
     
+    private final AtomicInteger activeDownloaders = new AtomicInteger(0);
+
     public URLQueue() throws RemoteException {
         super();
         // MUDANÇA 3: Instanciar como LinkedBlockingDeque
@@ -91,5 +93,27 @@ public class URLQueue extends UnicastRemoteObject implements URLQueueInterface {
     @Override
     public String ping() throws RemoteException {
         return "Queue Server Online - Pendentes: " + queue.size();
+    }
+
+    @Override
+    public void registerDownloader() throws RemoteException {
+        int n = activeDownloaders.incrementAndGet();
+        System.out.println(" [Queue] Novo Downloader registado. Total: " + n);
+    }
+
+    @Override
+    public void unregisterDownloader() throws RemoteException {
+        int n = activeDownloaders.decrementAndGet();
+        // Evitar números negativos por segurança
+        if (n < 0) {
+            activeDownloaders.set(0);
+            n = 0;
+        }
+        System.out.println(" [Queue] Downloader saiu. Total: " + n);
+    }
+
+    @Override
+    public int getActiveDownloaders() throws RemoteException {
+        return activeDownloaders.get();
     }
 }

@@ -58,6 +58,14 @@ public class WebController {
             if (gateway != null && !query.isBlank()) {
                 List<String> terms = List.of(query.split("\\s+"));
                 results = gateway.search(terms, page);
+                try {
+                    String prompt = "Resume numa frase o conceito de: " + query;
+                    String analysis = ollamaService.generateText(prompt);
+                    model.addAttribute("aiAnalysis", analysis);
+                } catch (Exception e) {
+                    // Se a IA falhar, não faz mal, a pesquisa continua
+                    System.err.println("Erro na IA Automática: " + e.getMessage());
+                }
             }
         } catch (Exception e)  {
             model.addAttribute("error", "Erro na pesquisa: " + e.getMessage());
@@ -116,21 +124,5 @@ public class WebController {
         return "redirect:/search?q=" + (q != null ? q : "");
     }
 
-    // --- NOVO: ANÁLISE IA (Requisito Meta 2) ---
-    @PostMapping("/search/analysis")
-    public String analyzeSearch(@RequestParam String q, RedirectAttributes redirectAttributes) {
-        try {
-            String prompt = "Resume o conceito principal sobre: " + q;
-            String analysis = ollamaService.generateText(prompt);
-            
-            // Envia a análise para o HTML mostrar
-            redirectAttributes.addFlashAttribute("aiAnalysis", analysis);
-            redirectAttributes.addFlashAttribute("query", q);
-            
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Erro na IA: " + e.getMessage());
-        }
-        
-        return "redirect:/search?q=" + q;
-    }
+    
 }

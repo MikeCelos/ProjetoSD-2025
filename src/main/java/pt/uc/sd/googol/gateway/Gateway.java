@@ -291,6 +291,14 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             return (System.currentTimeMillis() - timestamp) > CACHE_TTL_MS;
         }
     }
+
+    @Override
+    public int getActiveDownloaders() throws RemoteException {
+        if (urlQueue != null) {
+            return urlQueue.getActiveDownloaders();
+        }
+        return 0;
+    }
     
     // ===== MAIN =====
     public static void main(String[] args) {

@@ -36,9 +36,20 @@ public class Downloader {
             
             // Lookup: Procura o objeto "queue" no servidor remoto
             this.urlQueue = (URLQueueInterface) queueRegistry.lookup("queue");
+
+            this.urlQueue.registerDownloader();
             
             // Teste: Ping para ver se está vivo
             System.out.println(" ✓ " + this.urlQueue.ping());
+
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                System.out.println("A sair....");
+                urlQueue.unregisterDownloader();
+            } catch (Exception e) {
+                // Ignorar erros no fecho
+            }
+        }));
             
         } catch (Exception e) {
             System.err.println(" ERRO CRÍTICO: Não foi possível conectar à URL Queue!");
@@ -61,9 +72,9 @@ public class Downloader {
                     BarrelInterface barrel = (BarrelInterface) barrelRegistry.lookup(barrelName);
                     barrel.ping(); 
                     barrels.add(barrel);
-                    System.out.println("  ✓ " + barrelName + " conectado");
+                    System.out.println( barrelName + " conectado");
                 } catch (Exception e) {
-                    System.err.println("  ⚠ Falha ao conectar " + "barrel" + i);
+                    System.err.println(" Falha ao conectar " + "barrel" + i);
                 }
             }
             
@@ -71,7 +82,7 @@ public class Downloader {
                 System.err.println("AVISO: Nenhum barrel encontrado. O sistema não guardará dados.");
             } else {
                 tempMulticast = new ReliableMulticast(barrels);
-                System.out.println(" ✓ Multicast iniciado com " + barrels.size() + " barrels");
+                System.out.println(" Multicast iniciado com " + barrels.size() + " barrels");
             }
             
         } catch (Exception e) {
@@ -148,14 +159,7 @@ public class Downloader {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
         
-        // Manter a correr por um tempo para teste
-        try {
-            Thread.sleep(120000); // 2 minutos
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        downloader.shutdown();
     }
 }

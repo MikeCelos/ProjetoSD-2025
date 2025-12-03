@@ -26,10 +26,6 @@ public class QueueServer {
             System.out.println("=== URL Queue Server Pronto ===");
             System.out.println("À espera de Downloaders...");
             
-            // Adiciona alguns URLs iniciais (Seeds)
-            queue.addURL("https://pt.wikipedia.org/wiki/Universidade_de_Coimbra");
-            queue.addURL("https://www.uc.pt");
-            queue.addURL("https://pt.wikipedia.org/wiki/Portugal");
             
         } catch (Exception e) {
             System.err.println("Erro no QueueServer: " + e.getMessage());
