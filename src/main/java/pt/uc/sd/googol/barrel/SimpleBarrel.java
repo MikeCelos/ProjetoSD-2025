@@ -12,6 +12,19 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+/**
+ * Implementação do servidor de armazenamento (Storage Barrel).
+ * <p>
+ * Esta classe gere o índice invertido, o armazenamento de páginas e os backlinks.
+ * Implementa mecanismos de tolerância a falhas, incluindo:
+ * <ul>
+ * <li>Persistência de dados em disco (ficheiros .dat).</li>
+ * <li>Sincronização automática com outros Barrels no arranque (State Transfer).</li>
+ * <li>Thread de auto-save para salvaguarda periódica.</li>
+ * </ul>
+ *
+ * @author André Ramos 2023227306
+ */
 public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface {
     
     private final int barrelId;
@@ -22,9 +35,17 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
     private final Map<String, Set<String>> index = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> backlinks = new ConcurrentHashMap<>();
     
-    // Flag de segurança para evitar gravar dados incompletos
+    // Flag de segurança para evitar gravar dados incompletos durante o arranque
     private volatile boolean isReady = false;
     
+    /**
+     * Construtor do Barrel.
+     * Inicia o processo de recuperação de dados (Sincronização ou Disco) numa thread separada
+     * para não bloquear o registo RMI.
+     *
+     * @param barrelId Identificador único deste Barrel (0, 1, etc.).
+     * @throws RemoteException Se houver erro na exportação RMI.
+     */
     protected SimpleBarrel(int barrelId) throws RemoteException {
         super();
         this.barrelId = barrelId;
@@ -61,12 +82,18 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
             }
         }).start();
         
-        // Shutdown Hook
+        // Shutdown Hook para gravar ao fechar
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (isReady) saveToDisk();
         }));
     }
 
+    /**
+     * Tenta sincronizar dados a partir de outro Barrel ativo na rede.
+     * Procura outros serviços "barrelX" no RMI Registry.
+     *
+     * @return true se a sincronização foi bem sucedida, false caso contrário.
+     */
     private boolean syncFromPeer() {
         try {
             Registry registry = LocateRegistry.getRegistry(1099);
@@ -80,7 +107,6 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
                         
                         SyncData data = peer.getFullState();
                         if (data != null) {
-                            // USAR putAll PARA NÃO PERDER DADOS RECEBIDOS VIA MULTICAST DURANTE O ARRANQUE
                             this.pages.putAll(data.pages);
                             this.index.putAll(data.index);
                             this.backlinks.putAll(data.backlinks);
@@ -104,9 +130,11 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
         return new SyncData(new HashMap<>(pages), new HashMap<>(index), new HashMap<>(backlinks));
     }
 
+    /**
+     * Grava o estado atual dos mapas para um ficheiro local (.dat).
+     * Só executa se a flag isReady for verdadeira.
+     */
     private synchronized void saveToDisk() {
-        // SEGURANÇA: Nunca gravar se ainda estamos a carregar!
-        // Isto impede que um barrel vazio grave um ficheiro vazio por cima do backup.
         if (!isReady) return;
 
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(dataFileName))) {
@@ -118,6 +146,9 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
         }
     }
     
+    /**
+     * Carrega o estado a partir do ficheiro local (.dat).
+     */
     @SuppressWarnings("unchecked")
     private void loadFromDisk() {
         File file = new File(dataFileName);
@@ -131,7 +162,6 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
             Map<String, Set<String>> i = (Map<String, Set<String>>) ois.readObject();
             Map<String, Set<String>> b = (Map<String, Set<String>>) ois.readObject();
             
-            // Usar putAll também aqui
             this.pages.putAll(p);
             this.index.putAll(i);
             this.backlinks.putAll(b);
@@ -142,12 +172,10 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
         }
     }
 
-    // --- Métodos Remotos ---
     @Override
     public void addDocument(PageInfo page) throws RemoteException {
         pages.put(page.getUrl(), page);
         
-        // Indexação manual para garantir thread-safety nos Sets internos
         for (String word : page.getWords()) {
             index.computeIfAbsent(word, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
         }
@@ -155,7 +183,6 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
             backlinks.computeIfAbsent(link, k -> ConcurrentHashMap.newKeySet()).add(page.getUrl());
         }
         
-        // Feedback visual reduzido para não poluir logs
         if (pages.size() % 10 == 0) { 
             System.out.println(" [Barrel" + barrelId + "] Total: " + pages.size());
         }

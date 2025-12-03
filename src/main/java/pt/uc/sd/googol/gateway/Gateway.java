@@ -1,7 +1,7 @@
 package pt.uc.sd.googol.gateway;
 
 import pt.uc.sd.googol.barrel.BarrelInterface;
-import pt.uc.sd.googol.downloader.URLQueueInterface;
+import pt.uc.sd.googol.queue.URLQueueInterface;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -12,23 +12,52 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
+/**
+ * Ponto de entrada (Gateway) do sistema Googol.
+ * <p>
+ * Atua como intermediário entre os Clientes (CLI ou Web) e o backend distribuído (Barrels e Queue).
+ * Responsabilidades principais:
+ * <ul>
+ * <li>Receber pedidos de pesquisa e encaminhá-los para um Barrel disponível (Load Balancing).</li>
+ * <li>Manter uma cache de resultados para melhorar o desempenho.</li>
+ * <li>Gerir a lista de Barrels ativos e tolerar falhas (reconexão automática).</li>
+ * <li>Fornecer estatísticas agregadas do sistema.</li>
+ * <li>Encaminhar novos URLs para a fila de indexação.</li>
+ * </ul>
+ *
+ * @author André Ramos 2023227306
+ */
 public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     
+    /** Lista de Barrels conhecidos e ativos. */
     private final List<BarrelInterface> barrels;
+    
+    /** Índice para o algoritmo Round-Robin de balanceamento de carga. */
     private int currentBarrelIndex = 0;
     
-    // Cache de resultados (termo + página -> resultados)
+    /** Cache de resultados de pesquisa (Termo+Página -> Lista de Resultados). */
     private final Map<String, CachedResult> searchCache;
-    private static final long CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+    
+    /** Tempo de vida da cache (5 minutos). */
+    private static final long CACHE_TTL_MS = 5 * 60 * 1000;
 
-    // Referência para a Queue (para indexar novos URLs)
+    /** Referência remota para a fila de URLs (para indexação manual). */
     private final URLQueueInterface urlQueue;
     
-    // Estatísticas
-    private final Map<String, Integer> searchCounts; // Top 10 pesquisas
-    private final Map<Integer, List<Long>> responseTimes; // Tempos por barrel
+    /** Contador de pesquisas para o "Top 10". */
+    private final Map<String, Integer> searchCounts;
     
-    // CORREÇÃO AQUI: 'protected' estava escrito 'pprotected'
+    /** Registo de tempos de resposta por Barrel para cálculo de latência média. */
+    private final Map<Integer, List<Long>> responseTimes;
+    
+    /**
+     * Construtor do Gateway.
+     * Inicializa as estruturas de dados e estabelece a ligação inicial com os componentes.
+     *
+     * @param barrels Lista inicial de interfaces RMI para os Barrels.
+     * @param urlQueue Interface RMI para a fila de URLs.
+     * @throws RemoteException Se ocorrer um erro na exportação RMI.
+     */
     protected Gateway(List<BarrelInterface> barrels, URLQueueInterface urlQueue) throws RemoteException {
         super();
         this.barrels = barrels;
@@ -45,6 +74,14 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         System.out.println(" Gateway inicializado com " + barrels.size() + " barrels");
     }
 
+    /**
+     * Envia um URL para ser indexado com prioridade máxima.
+     * O URL é colocado no início da fila de processamento.
+     *
+     * @param url O endereço web a indexar.
+     * @return true se o URL foi aceite pela fila, false caso contrário.
+     * @throws RemoteException Se houver erro de comunicação com a Queue.
+     */
     @Override
     public boolean indexUrl(String url) throws RemoteException {
         System.out.println(" Pedido de indexação recebido: " + url);
@@ -54,7 +91,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
         
         try {
-            // Validação básica
+            // Validação básica e normalização
             if (!url.startsWith("http")) {
                 url = "https://" + url;
             }
@@ -68,6 +105,16 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
     }
 
+    /**
+     * Realiza uma pesquisa no sistema.
+     * Utiliza cache para respostas rápidas e balanceamento de carga (Round-Robin)
+     * para distribuir os pedidos entre os Barrels. Inclui mecanismo de failover.
+     *
+     * @param terms Lista de termos a pesquisar.
+     * @param page Número da página de resultados.
+     * @return Lista de resultados encontrados.
+     * @throws RemoteException Se todos os Barrels falharem.
+     */
     @Override
     public List<SearchResult> search(List<String> terms, int page) throws RemoteException {
         if (terms == null || terms.isEmpty()) {
@@ -100,7 +147,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         System.out.println(" Pesquisando: " + normalizedTerms + " (página " + page + ")");
         
         // Escolher barrel (round-robin)
-        int barrelIdx = currentBarrelIndex; // Guardar índice localmente para stats
+        int barrelIdx = currentBarrelIndex; 
         BarrelInterface barrel = getNextBarrel();
         
         long startTime = System.currentTimeMillis();
@@ -131,12 +178,18 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
     }
     
+    /**
+     * Obtém os backlinks para um determinado URL.
+     * Tenta variações do URL (http/https/www) para aumentar a probabilidade de encontrar resultados.
+     *
+     * @param url O URL alvo.
+     * @return Lista de URLs que apontam para o alvo.
+     * @throws RemoteException Se ocorrer erro na comunicação.
+     */
     @Override
     public List<String> getBacklinks(String url) throws RemoteException {
         System.out.println(" Obtendo backlinks de: " + url);
         
-        // OTIMIZAÇÃO: Consultar apenas 1 barrel (Replicas têm os mesmos dados)
-        // TRUQUE: Tentar variações de URL para aumentar probabilidade de match
         List<String> variations = new ArrayList<>();
         variations.add(url);
         
@@ -163,7 +216,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
                         return res;
                     }
                 }
-                return new ArrayList<>(); // Se correu variações e não encontrou nada
+                return new ArrayList<>(); 
                 
             } catch (RemoteException e) {
                 System.err.println(" Erro no barrel (backlinks). Tentando outro...");
@@ -175,6 +228,14 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         throw new RemoteException("Nenhum barrel disponível para backlinks");
     }
     
+    /**
+     * Compila e retorna as estatísticas completas do sistema.
+     * Inclui estado dos Barrels, tempos de resposta, Top 10 pesquisas e contagens globais.
+     * Implementa lógica de reconexão automática para Barrels que tenham reiniciado.
+     *
+     * @return String formatada com o relatório de estado.
+     * @throws RemoteException Se ocorrer erro fatal.
+     */
     @Override
     public String getStats() throws RemoteException {
         StringBuilder stats = new StringBuilder();
@@ -214,21 +275,17 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
                 try {
                     System.out.println(" [Gateway] Barrel " + i + " não responde. Tentando reconectar...");
                     
-                    // 1. Procurar no Registry novamente
-                    Registry registry = LocateRegistry.getRegistry(1099); // Porta padrão
+                    Registry registry = LocateRegistry.getRegistry(1099);
                     BarrelInterface newBarrelRef = (BarrelInterface) registry.lookup("barrel" + i);
                     
-                    // 2. Atualizar a lista do Gateway com o "novo número de telefone"
+                    // Atualizar a lista com a nova referência
                     barrels.set(i, newBarrelRef);
                     
-                    // 3. Tentar pedir estatísticas novamente
                     stats.append(newBarrelRef.getStats()).append(" (Reconectado)\n");
                     System.out.println(" [Gateway] ✓ Reconexão bem-sucedida ao Barrel " + i);
                     
                 } catch (Exception ex) {
-                    // Se mesmo tentando reconectar falhar, então está mesmo morto
                     stats.append("Barrel ").append(i).append(": OFFLINE (Incontactável)\n");
-                    // System.err.println(" [Gateway] Falha na reconexão: " + ex.getMessage());
                 }
             }
         }
@@ -241,16 +298,20 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         return "Gateway OK - " + barrels.size() + " barrels disponíveis";
     }
 
+    /** Remove entradas expiradas da cache de pesquisa. */
     private void cleanExpiredCache() {
         searchCache.entrySet().removeIf(entry -> entry.getValue().isExpired());
     }
     
-    // Load balancing - Round Robin
+    /**
+     * Seleciona o próximo Barrel disponível usando Round-Robin.
+     * @return Interface do Barrel escolhido.
+     * @throws RemoteException Se não houver Barrels disponíveis.
+     */
     private synchronized BarrelInterface getNextBarrel() throws RemoteException {
         if (barrels.isEmpty()) {
             throw new RemoteException("Nenhum barrel disponível");
         }
-        // Garantir que índice é válido (caso barrels tenham sido removidos)
         if (currentBarrelIndex >= barrels.size()) {
             currentBarrelIndex = 0;
         }
@@ -260,6 +321,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         return barrel;
     }
     
+    /** Remove um Barrel falhado da lista de ativos. */
     private synchronized void removeBarrel(BarrelInterface barrel) {
         barrels.remove(barrel);
         System.err.println(" Barrel removido. Restantes: " + barrels.size());
@@ -277,7 +339,15 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         return 0;
     }
     
-    // Classe interna para cache
+    @Override
+    public int getActiveDownloaders() throws RemoteException {
+        if (urlQueue != null) {
+            return urlQueue.getActiveDownloaders();
+        }
+        return 0;
+    }
+    
+    /** Classe interna para armazenar resultados em cache com timestamp. */
     private static class CachedResult {
         final List<SearchResult> results;
         final long timestamp;
@@ -291,24 +361,21 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             return (System.currentTimeMillis() - timestamp) > CACHE_TTL_MS;
         }
     }
-
-    @Override
-    public int getActiveDownloaders() throws RemoteException {
-        if (urlQueue != null) {
-            return urlQueue.getActiveDownloaders();
-        }
-        return 0;
-    }
     
-    // ===== MAIN =====
+    /**
+     * Ponto de entrada do Gateway.
+     * Configura o RMI, descobre os Barrels e a Queue, e inicia o serviço.
+     *
+     * @param args Argumentos da linha de comando (não utilizados).
+     */
     public static void main(String[] args) {
         try {
             int gatewayPort = 1100;
             int barrelPort = 1099;
-            int queuePort = 1098; // <--- Porta da Queue
+            int queuePort = 1098; 
             int numBarrels = 2; 
             
-            // 1. Conectar aos Barrels (Igual ao anterior)
+            // 1. Conectar aos Barrels
             List<BarrelInterface> barrels = new ArrayList<>();
             Registry barrelRegistry = LocateRegistry.getRegistry("localhost", barrelPort);
             for (int i = 0; i < numBarrels; i++) {
@@ -318,7 +385,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
                 } catch (Exception e) { /* Log erro */ }
             }
             
-            // 2. Conectar à Queue (NOVO)
+            // 2. Conectar à Queue
             URLQueueInterface queue = null;
             try {
                 Registry queueRegistry = LocateRegistry.getRegistry("localhost", queuePort);
@@ -330,14 +397,20 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
 
             // 3. Iniciar Gateway
             Registry gatewayRegistry = LocateRegistry.createRegistry(gatewayPort);
-            // Passamos a queue para o construtor
             Gateway gateway = new Gateway(barrels, queue); 
             gatewayRegistry.rebind("gateway", gateway);
             
             System.out.println(" Gateway rodando na porta " + gatewayPort);
             
-            // Manter vivo...
-            while(true) Thread.sleep(1000);
+            // Manter vivo e limpar cache periodicamente
+            new Thread(() -> {
+                while (true) {
+                    try {
+                        Thread.sleep(60000);
+                        gateway.cleanExpiredCache();
+                    } catch (InterruptedException e) { break; }
+                }
+            }).start();
             
         } catch (Exception e) {
             e.printStackTrace();

@@ -3,27 +3,90 @@ package pt.uc.sd.googol.web.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 
+/**
+ * Modelo de dados (DTO) que representa um item (notícia, comentário, etc.) da API do Hacker News.
+ * <p>
+ * Esta classe é utilizada para mapear automaticamente as respostas JSON provenientes da API externa
+ * (https://hacker-news.firebaseio.com/v0/item/{id}.json) para objetos Java.
+ * <p>
+ * A anotação {@link JsonIgnoreProperties} garante que, se a API do Hacker News adicionar
+ * novos campos no futuro, a aplicação não falha ao tentar processá-los.
+ *
+ * @author André Ramos 2023227306
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class HackerNewsItemRecord {
+    
+    /** O identificador único do item no Hacker News. */
     private Integer id;
+    
+    /** Indica se o item foi apagado. */
     private Boolean deleted;
+    
+    /** O tipo de item (ex: "story", "comment", "job", "poll"). */
     private String type;
+    
+    /** O nome de utilizador do autor. */
     private String by;
+    
+    /** Data de criação em formato Unix Time. */
     private Long time;
+    
+    /** O texto do comentário ou história (pode conter HTML). */
     private String text;
+    
+    /** Indica se o item está "morto" (dead). */
     private Boolean dead;
+    
+    /** O ID do item pai (para comentários). */
     private String parent;
+    
+    /** O ID da sondagem associada. */
     private Integer poll;
+    
+    /** Lista de IDs dos comentários filhos. */
     private List<Integer> kids;
+    
+    /** O URL da história. Campo CRÍTICO para o projeto Googol (é este que indexamos). */
     private String url;        
+    
+    /** A pontuação (karma) da história. */
     private Integer score;
+    
+    /** O título da história. Usado para filtrar pesquisas. */
     private String title;
+    
+    /** Lista de partes relacionadas (para sondagens). */
     private List<Integer> parts;
+    
+    /** O número total de comentários descendentes. */
     private Integer descendants;
 
+    /**
+     * Construtor vazio necessário para a deserialização do Jackson (JSON -> Objeto).
+     */
     public HackerNewsItemRecord() {
     }
 
+    /**
+     * Construtor completo para instanciar objetos manualmente, se necessário.
+     *
+     * @param id O ID do item.
+     * @param deleted Se foi apagado.
+     * @param type O tipo de item.
+     * @param by O autor.
+     * @param time O timestamp.
+     * @param text O texto.
+     * @param dead Se está morto.
+     * @param parent O pai.
+     * @param poll A sondagem.
+     * @param kids Os filhos.
+     * @param url O URL externo.
+     * @param score A pontuação.
+     * @param title O título.
+     * @param parts As partes.
+     * @param descendants O número de descendentes.
+     */
     public HackerNewsItemRecord(Integer id, Boolean deleted, String type, String by, Long time, String text,
                                 Boolean dead, String parent, Integer poll, List<Integer> kids, String url,
                                 Integer score, String title, List<Integer> parts, Integer descendants) {
@@ -84,6 +147,10 @@ public class HackerNewsItemRecord {
         return kids;
     }
 
+    /**
+     * Obtém o URL externo associado à história.
+     * @return O endereço Web para indexação.
+     */
     public String getUrl() {
         return url;
     }
@@ -92,6 +159,10 @@ public class HackerNewsItemRecord {
         return score;
     }
 
+    /**
+     * Obtém o título da história.
+     * @return O título para filtragem por palavras-chave.
+     */
     public String getTitle() {
         return title;
     }

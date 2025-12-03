@@ -1,10 +1,42 @@
-http://localhost:8080
+=========================================
+ GUIA DE EXECUÇÃO - GOOGOL (Meta 2)
+=========================================
 
-executar nesta ordem 
+PASSO 0: PREPARAÇÃO (Executar uma vez)
+-----------------------------------------
+1. Iniciar o serviço de IA (em background):
+   ollama serve
+
+2. Compilar o projeto:
+   mvn clean compile
+
+=========================================
+PASSO 1: ARRANCAR SISTEMA (Terminais Separados)
+Nota: Abre um novo terminal para cada comando abaixo.
+=========================================
+
+# Terminal 1 - Barrel 0 (Storage)
 java -cp target/classes pt.uc.sd.googol.barrel.BarrelLauncher 0
+
+# Terminal 2 - Barrel 1 (Storage Backup)
 java -cp target/classes pt.uc.sd.googol.barrel.BarrelLauncher 1
+
+# Terminal 3 - URL Queue (Fila de Tarefas)
 java -cp target/classes pt.uc.sd.googol.downloader.QueueServer
+
+# Terminal 4 - Gateway (Servidor RMI Principal)
 java -cp target/classes pt.uc.sd.googol.gateway.Gateway
+
+# Terminal 5 - Downloader (Web Crawler)
 mvn exec:java -Dexec.mainClass="pt.uc.sd.googol.downloader.Downloader"
-java -cp target/classes pt.uc.sd.googol.client.GoogolClient
+
+=========================================
+PASSO 2: INTERFACES DE UTILIZADOR
+=========================================
+
+# Terminal 6 - Web Server (Frontend Meta 2)
 mvn spring-boot:run
+-> Aceder em: http://localhost:8080
+
+# Terminal 7 - Cliente CLI (Opcional - Meta 1)
+java -cp target/classes pt.uc.sd.googol.client.GoogolClient

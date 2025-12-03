@@ -10,19 +10,38 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import pt.uc.sd.googol.queue.URLQueueInterface;
 
+/**
+ * Componente principal do Web Crawler (Downloader).
+ * <p>
+ * Responsável por gerir um conjunto de threads (workers) que descarregam e processam páginas Web.
+ * Liga-se à {@link URLQueueInterface} remota para obter URLs e reportar a sua presença,
+ * e utiliza o protocolo {@link ReliableMulticast} para enviar os dados processados para os Barrels.
+ *
+ * @author André Ramos 2023227306
+ */
 public class Downloader {
+    
     private final int numWorkers;
-    
-    // MUDANÇA 1: Usar a Interface, não a classe concreta
     private URLQueueInterface urlQueue; 
-    
     private final RobotsTxtParser robotsParser;
     private final ReliableMulticast multicast;
     private ExecutorService executorService;
     private List<DownloaderWorker> workers;
     
-    // MUDANÇA 2: Receber numBarrels e dados da Queue no construtor
+    /**
+     * Construtor do Downloader.
+     * Estabelece as ligações RMI com a Queue e os Barrels, e regista este Downloader
+     * como ativo na Queue central.
+     *
+     * @param numWorkers Número de threads de crawling a iniciar.
+     * @param barrelHost Host onde estão os Barrels.
+     * @param barrelPort Porta do RMI Registry dos Barrels.
+     * @param numBarrels Número de Barrels esperados na rede.
+     * @param queueHost Host onde está a Queue.
+     * @param queuePort Porta do RMI Registry da Queue.
+     */
     public Downloader(int numWorkers, String barrelHost, int barrelPort, 
                       int numBarrels, String queueHost, int queuePort) {
         this.numWorkers = numWorkers;
@@ -37,24 +56,25 @@ public class Downloader {
             // Lookup: Procura o objeto "queue" no servidor remoto
             this.urlQueue = (URLQueueInterface) queueRegistry.lookup("queue");
 
+            // Regista a presença deste downloader para estatísticas em tempo real
             this.urlQueue.registerDownloader();
             
             // Teste: Ping para ver se está vivo
             System.out.println(" ✓ " + this.urlQueue.ping());
 
+            // Shutdown Hook: Garante que o downloader se "desregistra" se for fechado (Ctrl+C)
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                System.out.println("A sair....");
-                urlQueue.unregisterDownloader();
-            } catch (Exception e) {
-                // Ignorar erros no fecho
-            }
-        }));
+                try {
+                    System.out.println("A sair....");
+                    urlQueue.unregisterDownloader();
+                } catch (Exception e) {
+                    // Ignorar erros no fecho
+                }
+            }));
             
         } catch (Exception e) {
             System.err.println(" ERRO CRÍTICO: Não foi possível conectar à URL Queue!");
             e.printStackTrace();
-            // Sem fila, o downloader não pode trabalhar, por isso lançamos erro fatal ou terminamos
             throw new RuntimeException("Queue não encontrada. O QueueServer está a correr?");
         }
 
@@ -92,6 +112,9 @@ public class Downloader {
         this.multicast = tempMulticast;
     }
     
+    /**
+     * Inicia o pool de threads e distribui o trabalho pelos Workers.
+     */
     public void start() {
         System.out.println("Iniciando " + numWorkers + " workers...");
         executorService = Executors.newFixedThreadPool(numWorkers);
@@ -104,6 +127,9 @@ public class Downloader {
         }
     }
     
+    /**
+     * Encerra graciosamente todos os workers e ligações.
+     */
     public void shutdown() {
         System.out.println("Encerrando downloaders...");
         if (multicast != null) {
@@ -125,6 +151,11 @@ public class Downloader {
         System.out.println("Fim.");
     }
     
+    /**
+     * Ponto de entrada da aplicação Downloader.
+     *
+     * @param args Argumentos da linha de comando (não utilizados na configuração atual).
+     */
     public static void main(String[] args) {
         // Configurações
         int numWorkers = 3;
@@ -149,17 +180,11 @@ public class Downloader {
         downloader.start();
         
         // Opcional: Adicionar URL inicial (seed) para começar o trabalho
-        // Só deve ser feito se a fila estiver vazia, mas mal não faz
         try {
             System.out.println("Enviando seed URL...");
-            // Nota: Como addURL lança RemoteException, precisamos de try-catch
-            // Mas aqui no main não temos acesso direto fácil sem getters, 
-            // assumimos que os workers vão pedir URLs.
-            // Se quiseres adicionar manualmente aqui, precisarias de expor o urlQueue.
+            // Nota: Se quiseres adicionar manualmente aqui, precisarias de expor o urlQueue.
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        
     }
 }

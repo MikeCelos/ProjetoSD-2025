@@ -5,7 +5,7 @@ import pt.uc.sd.googol.web.service.OllamaService;
 import pt.uc.sd.googol.gateway.GatewayInterface;
 import pt.uc.sd.googol.gateway.SearchResult;
 
-import org.springframework.beans.factory.annotation.Autowired; // Importante para injeção
+import org.springframework.beans.factory.annotation.Autowired; 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +16,21 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Controlador principal da aplicação Web (Frontend Spring Boot).
+ * <p>
+ * Implementa o padrão MVC, processando os pedidos HTTP dos utilizadores e devolvendo
+ * as vistas HTML apropriadas (Thymeleaf).
+ * <p>
+ * Responsabilidades:
+ * <ul>
+ * <li>Gerir a página inicial e os resultados de pesquisa.</li>
+ * <li>Integrar com o Gateway RMI para obter dados do backend.</li>
+ * <li>Coordenar os serviços de Hacker News (REST) e Ollama (IA).</li>
+ * </ul>
+ *
+ * @author André Ramos 2023227306
+ */
 @Controller
 public class WebController {
 
@@ -24,7 +39,14 @@ public class WebController {
     private final OllamaService ollamaService;
     private final GatewayInterface gateway; // Injetado automaticamente pelo RmiConfig
 
-    // Construtor: O Spring Boot vai preencher isto sozinho (Autowired)
+    /**
+     * Construtor com injeção de dependências.
+     * O Spring Boot injeta automaticamente os serviços e o Gateway RMI.
+     *
+     * @param hnService Serviço de integração com a API do Hacker News.
+     * @param ollamaService Serviço de integração com o modelo de IA local (Ollama).
+     * @param gateway Interface RMI para comunicação com o backend distribuído (pode ser null se offline).
+     */
     @Autowired 
     public WebController(HackerNewsService hnService, 
                          OllamaService ollamaService, 
@@ -34,13 +56,31 @@ public class WebController {
         this.gateway = gateway;
     }
 
-    // --- PÁGINA INICIAL ---
+    /**
+     * Renderiza a página inicial da aplicação.
+     *
+     * @return O nome do template Thymeleaf ("index").
+     */
     @GetMapping("/")
     public String index() {
         return "index"; // templates/index.html
     }
 
-    // --- PESQUISAR ---
+    /**
+     * Processa os pedidos de pesquisa.
+     * <p>
+     * Executa as seguintes operações:
+     * <ol>
+     * <li>Obtém os resultados do índice via RMI (Gateway).</li>
+     * <li>Gera automaticamente um resumo inteligente sobre o termo pesquisado usando o Ollama.</li>
+     * <li>Prepara os dados de paginação para a interface.</li>
+     * </ol>
+     *
+     * @param query O termo de pesquisa inserido pelo utilizador (parâmetro 'q').
+     * @param page O número da página de resultados (parâmetro 'page', default 0).
+     * @param model O modelo para passar dados para a vista HTML.
+     * @return O nome do template a renderizar.
+     */
     @GetMapping("/search")
     public String search(@RequestParam(value = "q", required = false) String query, 
                         @RequestParam(value = "page", defaultValue = "0") int page, 
@@ -56,14 +96,17 @@ public class WebController {
         // 2. Só chamamos o Gateway se houver texto para pesquisar
         try {
             if (gateway != null && !query.isBlank()) {
+                // A. Pesquisa Normal no Índice Distribuído (RMI)
                 List<String> terms = List.of(query.split("\\s+"));
                 results = gateway.search(terms, page);
+                
+                // B. Geração de Resumo com IA (Automático)
                 try {
                     String prompt = "Resume numa frase o conceito de: " + query;
                     String analysis = ollamaService.generateText(prompt);
                     model.addAttribute("aiAnalysis", analysis);
                 } catch (Exception e) {
-                    // Se a IA falhar, não faz mal, a pesquisa continua
+                    // Se a IA falhar (ex: Ollama desligado), não bloqueia a pesquisa principal
                     System.err.println("Erro na IA Automática: " + e.getMessage());
                 }
             }
@@ -71,19 +114,29 @@ public class WebController {
             model.addAttribute("error", "Erro na pesquisa: " + e.getMessage());
             e.printStackTrace();
         }
+        
+        // Preencher o modelo para o Thymeleaf
         model.addAttribute("query", query);
         model.addAttribute("results", results);
         
         // Lógica de paginação para os botões "Anterior/Seguinte" funcionarem
         model.addAttribute("totalResults", results.isEmpty() ? 0 : "10+");
         model.addAttribute("currentPage", page);
+        // Se a página estiver cheia (10 itens), assumimos que há mais resultados
         int totalPages = (results.size() >= 10) ? page + 2 : page + 1;
         model.addAttribute("totalPages", totalPages);
 
         return "index";
     }
 
-    // --- INDEXAR URL MANUAL (Melhorado com Feedback visual) ---
+    /**
+     * Processa a submissão manual de um URL para indexação.
+     * Envia o URL para a fila prioritária do backend via RMI.
+     *
+     * @param url O URL a indexar.
+     * @param redirectAttributes Atributos para passar mensagens flash (sucesso/erro) após o redirect.
+     * @return Redirecionamento para a página de pesquisa.
+     */
     @PostMapping("/index")
     public String addUrl(@RequestParam("url") String url, RedirectAttributes redirectAttributes) {
         try {
@@ -96,21 +149,30 @@ public class WebController {
                 }
                 System.out.println(" [WEB] Pedido de indexação de " + url + " -> " + ok);
             } else {
-                redirectAttributes.addFlashAttribute("errorMessage", "Gateway indisponível.");
+                redirectAttributes.addFlashAttribute("errorMessage", "Gateway indisponível (RMI Offline).");
             }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Erro: " + e.getMessage());
             e.printStackTrace();
         }
 
-        return "redirect:/search"; // Redireciona para evitar reenvio do form
+        return "redirect:/search"; // Redireciona para evitar reenvio do formulário
     }
 
-    // --- NOVO: HACKER NEWS (Requisito Meta 2) ---
+    /**
+     * Aciona a integração com a API REST do Hacker News.
+     * Pesquisa as "top stories", filtra as que contêm os termos da pesquisa e envia os URLs
+     * para indexação no backend.
+     *
+     * @param q O termo de pesquisa atual.
+     * @param redirectAttributes Atributos para feedback visual.
+     * @return Redirecionamento para a página de pesquisa (mantendo o termo 'q').
+     */
     @PostMapping("/search/hacker-news")
     public String indexHackerNews(@RequestParam(required = false) String q, 
                                   RedirectAttributes redirectAttributes) {
         
+        // Delega a lógica complexa para o serviço dedicado
         int count = hnService.processTopStories(q);
 
         if (count > 0) {
@@ -123,6 +185,4 @@ public class WebController {
 
         return "redirect:/search?q=" + (q != null ? q : "");
     }
-
-    
 }

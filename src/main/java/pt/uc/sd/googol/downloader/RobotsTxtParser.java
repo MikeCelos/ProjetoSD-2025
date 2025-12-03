@@ -7,19 +7,39 @@ import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Analisador de ficheiros robots.txt (Robot Exclusion Standard).
+ * <p>
+ * Esta classe é responsável por verificar se o Crawler tem permissão para aceder a determinados URLs
+ * e respeitar as regras de "politeness" (atrasos de rastreio) definidas pelos administradores dos sites.
+ * Mantém uma cache em memória das regras por domínio para evitar downloads repetidos do mesmo robots.txt.
+ *
+ * @author André Ramos 2023227306
+ */
 public class RobotsTxtParser {
     
-    // Cache de robots.txt por domínio
+    /** Cache de regras (RobotRules) indexada pelo domínio (ex: http://www.uc.pt). */
     private final Map<String, RobotRules> robotsCache;
+    
+    /** O nome do User-Agent deste bot (ex: "Googol Bot 1.0") para verificar regras específicas. */
     private final String userAgent;
     
+    /**
+     * Construtor do parser.
+     *
+     * @param userAgent O nome do agente que será usado para identificar este Crawler nos ficheiros robots.txt.
+     */
     public RobotsTxtParser(String userAgent) {
         this.userAgent = userAgent;
         this.robotsCache = new ConcurrentHashMap<>();
     }
     
     /**
-     * Verifica se um URL pode ser crawled de acordo com robots.txt
+     * Verifica se um URL pode ser visitado (crawled) de acordo com as regras do robots.txt do domínio.
+     * Se as regras para o domínio ainda não estiverem em cache, faz o download e parse do ficheiro.
+     *
+     * @param url O URL completo a verificar.
+     * @return true se o acesso for permitido ou se não houver robots.txt, false se for proibido.
      */
     public boolean isAllowed(String url) {
         try {
@@ -49,7 +69,10 @@ public class RobotsTxtParser {
     }
     
     /**
-     * Obtém o crawl delay em milissegundos para um domínio
+     * Obtém o atraso de rastreio (crawl delay) definido para um determinado URL.
+     *
+     * @param url O URL para o qual se pretende saber o delay.
+     * @return O tempo de espera em milissegundos (0 se não houver delay definido).
      */
     public long getCrawlDelay(String url) {
         try {
@@ -69,7 +92,11 @@ public class RobotsTxtParser {
     }
     
     /**
-     * Faz download e parse do robots.txt de um domínio
+     * Faz o download e interpretação do ficheiro robots.txt de um domínio.
+     * Usa a biblioteca Jsoup para fazer o pedido HTTP.
+     *
+     * @param domain O domínio base (ex: https://www.uc.pt).
+     * @return Objeto {@link RobotRules} com as regras analisadas.
      */
     private RobotRules fetchRobotsTxt(String domain) {
         String robotsUrl = domain + "/robots.txt";
@@ -94,7 +121,11 @@ public class RobotsTxtParser {
     }
     
     /**
-     * Faz parse do conteúdo do robots.txt
+     * Analisa o conteúdo de texto de um ficheiro robots.txt e extrai as regras relevantes.
+     * Processa apenas as secções que se aplicam ao User-Agent deste bot (ou "*").
+     *
+     * @param content O conteúdo textual do ficheiro robots.txt.
+     * @return As regras extraídas.
      */
     private RobotRules parseRobotsTxt(String content) {
         RobotRules rules = new RobotRules(false);
@@ -163,7 +194,7 @@ public class RobotsTxtParser {
     }
     
     /**
-     * Classe interna que representa as regras de um robots.txt
+     * Classe interna que armazena as regras de permissão e atraso para um domínio específico.
      */
     private static class RobotRules {
         boolean allowAll;
@@ -179,7 +210,11 @@ public class RobotsTxtParser {
         }
         
         /**
-         * Verifica se um path é permitido
+         * Verifica se um caminho específico é permitido pelas regras armazenadas.
+         * Segue a lógica padrão: Allow tem precedência sobre Disallow.
+         *
+         * @param path O caminho do URL (ex: /admin/login).
+         * @return true se permitido, false caso contrário.
          */
         boolean isAllowed(String path) {
             // Se permite tudo
@@ -207,14 +242,15 @@ public class RobotsTxtParser {
     }
     
     /**
-     * Limpa o cache (útil para testes)
+     * Limpa a cache de regras. Útil para testes ou para forçar a atualização das regras.
      */
     public void clearCache() {
         robotsCache.clear();
     }
     
     /**
-     * Retorna estatísticas do cache
+     * Imprime no terminal estatísticas sobre a cache de robots.txt.
+     * Mostra quantos domínios estão em cache e um resumo das regras para cada um.
      */
     public void printStats() {
         System.out.println("=== Robots.txt Cache ===");
