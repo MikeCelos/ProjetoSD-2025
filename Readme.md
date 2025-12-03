@@ -4,12 +4,12 @@
 
 ---
 
-## 👥 Autores (Grupo)
+## Autores (Grupo)
 André Ramos nº2023227306
 
 ---
 
-## 📋 Descrição do Projeto
+## Descrição do Projeto
 Este projeto consiste num motor de busca web distribuído e tolerante a falhas ("Googol"), desenvolvido em duas fases:
 
 1.  **Backend (Meta 1):** Sistema distribuído Java RMI com arquitetura de microsserviços:
@@ -26,7 +26,7 @@ Este projeto consiste num motor de busca web distribuído e tolerante a falhas (
 
 ---
 
-## ⚙️ Pré-requisitos
+## Pré-requisitos
 Para executar este projeto, o ambiente deve ter instalado:
 
 * **Java JDK 21** (Obrigatório).
