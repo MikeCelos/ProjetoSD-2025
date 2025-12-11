@@ -88,9 +88,13 @@ public class StatsScheduler {
             } catch (Exception e) {}
             stats.put("downloadersActive", downloaders);
 
-            // Top Queries (Placeholder para futura implementação de parsing da lista)
             List<String> topQueries = new ArrayList<>();
-            // Se o getStats do Gateway tiver "Top 10", podes tentar parsear aqui
+            // Procura por linhas tipo: 'termo': 5 vezes
+            Matcher mTop = Pattern.compile("'([^']+)': (\\d+) vezes").matcher(rawStats);
+            while(mTop.find()) {
+                // Adiciona à lista no formato "termo (5)"
+                topQueries.add(mTop.group(1) + " (" + mTop.group(2) + ")");
+            }
             stats.put("topQueries", topQueries);
 
             // Parsing das Latências dos Barrels (Regex)

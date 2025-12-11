@@ -163,7 +163,28 @@
             color: var(--text-muted);
         }
 
-        .search-main { margin-top: 4px; margin-bottom: 8px; }
+        /* Altera a search-main para alinhar os itens na horizontal */
+        .search-main {
+            margin-top: 4px;
+            margin-bottom: 8px;
+            display: flex;               /* Ativa o Flexbox */
+            justify-content: space-between; /* Empurra um para a esquerda, outro para a direita */
+            align-items: center;         /* Alinha verticalmente ao centro */
+            gap: 12px;                   /* Espaço mínimo entre a pesquisa e o botão */
+        }
+
+        /* Remove a margem de topo antiga das actions */
+        .search-actions {
+            display: flex;
+            align-items: center;
+            margin-top: 0; /* Importante: removemos o margin-top antigo */
+        }
+        
+        /* Opcional: Garante que o form de pesquisa ocupa o espaço necessário */
+        #search-form {
+            flex-grow: 1; /* Ocupa o espaço disponível */
+            max-width: 70%; /* Impede que encoste demasiado ao botão da direita se a tela for pequena */
+        }
 
         .search-input-wrapper {
             display: flex;
@@ -452,7 +473,7 @@
         <div class="top-nav-right">
             <div class="badge-pill">
                 <span class="badge-dot"></span>
-                <span>Cluster online</span>
+                <span>Motor de busca</span>
             </div>
             <span>SD · 2025/26</span>
         </div>
@@ -462,29 +483,13 @@
 
         <section class="search-panel">
 
-            <div class="search-header">
-                <div class="search-title">
-                    <h1>Explora a web indexada pelo teu cluster</h1>
-                    <span class="search-subtitle d-none d-md-inline">
-                        Gateway · Barrels · Downloaders em tempo real
-                    </span>
-                </div>
-                <div class="search-chip-row">
-                    <span class="search-chip">Multicast fiável</span>
-                    <span class="search-chip">Índice invertido</span>
-                    <span class="search-chip">RMI · Java</span>
-                    <span class="search-chip">Meta 2</span>
-                </div>
-            </div>
-
             <div class="search-main">
                 <form id="search-form"
                       class="d-flex align-items-center gap-2"
                       method="get"
                       action="/search"
                       th:action="@{/search}">
-                    <div class="search-input-wrapper">
-                        <span class="search-icon">⌕</span>
+                    <div class="search-input-wrapper w-100"> <span class="search-icon">⌕</span>
                         <input type="text"
                                class="search-input"
                                name="q"
@@ -505,10 +510,9 @@
                         <input type="hidden" name="q" th:value="${query}">
                         <button class="btn-ghost" type="submit">
                             <span class="dot"></span>
-                            <span>Indexar top stories do Hacker News</span>
+                            <span>Hacker News</span> 
                         </button>
                     </form>
-                    
                 </div>
             </div>
 
