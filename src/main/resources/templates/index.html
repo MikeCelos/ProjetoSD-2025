@@ -644,6 +644,8 @@
                     <li>Downloaders ativos: <span id="stats-downloaders" class="stat-number">-</span></li>
                     <li>Barrels ativos: <span id="stats-barrels" class="stat-number">-</span></li>
                     <li>URLs na fila: <span id="stats-queue-size" class="stat-number">-</span></li>
+                    
+                    <div id="stats-memory-container" style="margin-top: 4px;"></div>
                 </ul>
                 <div class="side-footer">
                     Atualizado em tempo real via WebSocket.
@@ -681,6 +683,7 @@
             stompClient.subscribe('/topic/stats', function (message) {
                 const data = JSON.parse(message.body);
 
+                // --- ATUALIZAÇÕES EXISTENTES ---
                 document.getElementById('stats-downloaders').textContent = data.downloadersActive;
                 document.getElementById('stats-barrels').textContent = data.barrelsActive;
                 document.getElementById('stats-queue-size').textContent = data.queueSize;
@@ -700,6 +703,19 @@
                     li.textContent = 'Barrel ' + b.barrelId + ': ' + b.avgMs + ' ms';
                     latenciesElem.appendChild(li);
                 });
+
+                // --- NOVO CÓDIGO (ADICIONA ISTO) ---
+                const memContainer = document.getElementById('stats-memory-container');
+                if (memContainer && data.barrelStorage && data.barrelStorage.length > 0) {
+                    memContainer.innerHTML = ''; 
+                    data.barrelStorage.forEach(function (b) {
+                        const li = document.createElement('li');
+                        // Cria um elemento <li> igual aos de cima
+                        li.innerHTML = `Páginas (B${b.barrelId}): <span class="stat-number">${b.count}</span>`;
+                        memContainer.appendChild(li);
+                    });
+                }
+                // ------------------------------------
             });
         });
     })();

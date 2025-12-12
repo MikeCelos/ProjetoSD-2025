@@ -97,6 +97,17 @@ public class StatsScheduler {
             }
             stats.put("topQueries", topQueries);
 
+            List<Map<String, Object>> storageStats = new ArrayList<>();
+            Matcher mStorage = Pattern.compile("\\[Barrel(\\d+)\\] P:(\\d+)").matcher(rawStats);
+
+            while(mStorage.find()) {
+                Map<String, Object> s = new HashMap<>();
+                s.put("barrelId", mStorage.group(1)); 
+                s.put("count", mStorage.group(2));    
+                storageStats.add(s);
+            }
+            stats.put("barrelStorage", storageStats);
+
             // Parsing das Latências dos Barrels (Regex)
             List<Map<String, Object>> latencies = new ArrayList<>();
             Matcher m = Pattern.compile("Barrel (\\d+): ([\\d\\.]+) ms").matcher(rawStats);
