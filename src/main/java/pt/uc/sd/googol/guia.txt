@@ -22,7 +22,7 @@ java -cp target/classes pt.uc.sd.googol.barrel.BarrelLauncher 0
 java -cp target/classes pt.uc.sd.googol.barrel.BarrelLauncher 1
 
 # Terminal 3 - URL Queue (Fila de Tarefas)
-java -cp target/classes pt.uc.sd.googol.downloader.QueueServer
+java -cp target/classes pt.uc.sd.googol.queue.QueueServer
 
 # Terminal 4 - Gateway (Servidor RMI Principal)
 java -cp target/classes pt.uc.sd.googol.gateway.Gateway
