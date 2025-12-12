@@ -1,11 +1,12 @@
 package pt.uc.sd.googol.web.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import pt.uc.sd.googol.gateway.GatewayInterface; // Importa a tua interface da Meta 1
-
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+
+import org.springframework.context.annotation.Bean; // Importa a tua interface da Meta 1
+import org.springframework.context.annotation.Configuration;
+
+import pt.uc.sd.googol.gateway.GatewayInterface;
 
 /**
  * Classe de configuração do Spring Boot responsável pela integração com o sistema RMI (Backend).

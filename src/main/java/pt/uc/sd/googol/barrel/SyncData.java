@@ -1,9 +1,10 @@
 package pt.uc.sd.googol.barrel;
 
-import pt.uc.sd.googol.common.PageInfo;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
+
+import pt.uc.sd.googol.common.PageInfo;
 
 /**
  * Objeto de Transferência de Dados (DTO) usado para a sincronização entre Barrels.

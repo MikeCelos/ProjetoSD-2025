@@ -1,16 +1,27 @@
 package pt.uc.sd.googol.barrel;
 
-import pt.uc.sd.googol.common.PageInfo;
-import pt.uc.sd.googol.gateway.SearchResult;
-
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+
+import pt.uc.sd.googol.common.PageInfo;
+import pt.uc.sd.googol.gateway.SearchResult;
 
 /**
  * Implementação do servidor de armazenamento (Storage Barrel).

@@ -1,7 +1,8 @@
 package pt.uc.sd.googol.common;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Classe que representa a informação extraída de uma página Web.

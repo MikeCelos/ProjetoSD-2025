@@ -1,15 +1,70 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 2
+ *  Ficheiro: StatsScheduler.java
+ * ===============================================================
+ *
+ *  @Resumo:
+ *  Serviço responsável pela recolha periódica de estatísticas do
+ *  sistema distribuído GOOGOL e pela sua difusão em tempo real
+ *  para o Frontend Web através de WebSockets (STOMP).
+ *
+ *  Esta classe funciona como um mecanismo de monitorização contínua,
+ *  permitindo que os utilizadores visualizem o estado do cluster
+ *  (Barrels, Downloaders, fila de URLs, latências, etc.) sem necessidade
+ *  de refresh da página.
+ *
+ *  @Papel na arquitetura:
+ *  <ul>
+ *    <li>Executa na camada Web (Spring Boot).</li>
+ *    <li>Comunica com o Backend distribuído via RMI (Gateway).</li>
+ *    <li>Transforma dados textuais em estruturas JSON.</li>
+ *    <li>Difunde estatísticas em tempo real via WebSocket.</li>
+ *  </ul>
+ *
+ *  @Fluxo de funcionamento:
+ *  <ol>
+ *    <li>A cada intervalo fixo, consulta o Gateway RMI.</li>
+ *    <li>Obtém estatísticas globais sob a forma de texto.</li>
+ *    <li>Extrai valores relevantes recorrendo a expressões regulares.</li>
+ *    <li>Constrói um objeto JSON com os dados processados.</li>
+ *    <li>Envia os dados para todos os clientes Web subscritos.</li>
+ *  </ol>
+ *
+ *  @Tecnologias utilizadas:
+ *  <ul>
+ *    <li>Spring Scheduling (@Scheduled).</li>
+ *    <li>Spring WebSocket (STOMP).</li>
+ *    <li>RMI para comunicação com o Gateway.</li>
+ *    <li>Regex para parsing de estatísticas textuais.</li>
+ *  </ul>
+ *
+ *  @Resiliência:
+ *  - O serviço tolera falhas temporárias do Gateway.
+ *  - A aplicação Web continua a funcionar mesmo que o Gateway esteja offline.
+ *  - Exceções de comunicação são capturadas e tratadas silenciosamente.
+ *
+ *  @Autor:
+ *   Elemento 1: André Ramos — 2023227306
+ *   Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
+ */
+
 package pt.uc.sd.googol.web.service;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate; 
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import pt.uc.sd.googol.gateway.GatewayInterface;
 
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import pt.uc.sd.googol.gateway.GatewayInterface;
 
 /**
  * Serviço de agendamento responsável por enviar estatísticas em tempo real para o Frontend.

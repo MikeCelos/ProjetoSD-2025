@@ -1,14 +1,44 @@
+/**
+ * <h1>DownloaderWorker</h1>
+ *
+ * <p>Representa uma unidade de trabalho (thread) do módulo Downloader.
+ * Cada instância processa URLs da {@link URLQueue}, descarrega e analisa
+ * o HTML usando <b>jsoup</b>, respeitando o ficheiro robots.txt, e envia
+ * os resultados para o {@link pt.uc.sd.googol.barrel.BarrelInterface}.
+ *
+ * <p>O fluxo de execução de cada worker é:
+ * <ol>
+ *     <li>Obter o próximo URL da fila</li>
+ *     <li>Verificar se é permitido por robots.txt</li>
+ *     <li>Efetuar o download e parsing do HTML</li>
+ *     <li>Extrair texto, palavras e ligações</li>
+ *     <li>Enviar um objeto {@link PageInfo} para o Barrel</li>
+ * </ol>
+ *
+ * <p>Os workers funcionam continuamente até serem interrompidos ou o sistema ser encerrado.
+ *
+ * @author Elemento 1 André Ramos 2023227306
+ * @version 1.0
+ * @see Downloader
+ * @see PageInfo
+ */
+
 package pt.uc.sd.googol.downloader;
 
-import pt.uc.sd.googol.common.PageInfo;
-import pt.uc.sd.googol.multicast.ReliableMulticast;
+import java.io.IOException;
+import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import java.io.IOException;
-import java.rmi.RemoteException;
-import java.util.*;
+
+import pt.uc.sd.googol.common.PageInfo;
+import pt.uc.sd.googol.multicast.ReliableMulticast;
 import pt.uc.sd.googol.queue.URLQueueInterface;
 
 /**

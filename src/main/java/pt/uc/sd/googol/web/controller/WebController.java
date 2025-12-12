@@ -1,9 +1,7 @@
 package pt.uc.sd.googol.web.controller;
 
-import pt.uc.sd.googol.web.service.HackerNewsService;
-import pt.uc.sd.googol.web.service.OllamaService;
-import pt.uc.sd.googol.gateway.GatewayInterface;
-import pt.uc.sd.googol.gateway.SearchResult;
+import java.util.Collections;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired; 
 import org.springframework.stereotype.Controller;
@@ -13,8 +11,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Collections;
-import java.util.List;
+import pt.uc.sd.googol.gateway.GatewayInterface;
+import pt.uc.sd.googol.gateway.SearchResult;
+import pt.uc.sd.googol.web.service.HackerNewsService;
+import pt.uc.sd.googol.web.service.OllamaService;
 
 /**
  * Controlador principal da aplicação Web (Frontend Spring Boot).

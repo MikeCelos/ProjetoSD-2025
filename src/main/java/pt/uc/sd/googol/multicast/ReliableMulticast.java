@@ -1,12 +1,96 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 1
+ *  Elemento 1: Andre Fonseca Ramos (2023227306)
+ *  Ficheiro: ReliableMulticast.java
+ * ===============================================================
+ *
+ *  @Resumo:
+ *  Implementação, em Java, de um mecanismo de **multicast fiável**
+ *  (reliable multicast) por cima de RMI, com o objetivo de garantir
+ *  que **todas as réplicas de Barrel** recebem as mesmas atualizações
+ *  de índice (objetos {@link pt.uc.sd.googol.common.PageInfo}).
+ *
+ *  Esta classe não é um Barrel e não é exposta via RMI; funciona como
+ *  um **componente de apoio** ao Downloader (ou a outro produtor de
+ *  páginas) para que, ao receber uma nova página, consiga difundi-la
+ *  para N barrels e ter a certeza de que pelo menos um número mínimo
+ *  de réplicas a recebeu.
+ *
+ *  @Motivação:
+ *  Num sistema distribuído com vários Barrels (barrel0, barrel1, ...),
+ *  se o Downloader enviar a página só para um Barrel, o índice fica
+ *  inconsistente. Com o reliable multicast, a mesma página é enviada
+ *  a vários Barrels e o emissor recebe feedback sobre o sucesso do
+ *  envio, permitindo retry e remoção de réplicas defeituosas.
+ *
+ *  @Modelo usado:
+ *  Implementa uma variante simples de **All-Ack Reliable Multicast**:
+ *   1. o emissor envia a página a todos os barrels (em paralelo);
+ *   2. regista quais aceitaram e quais falharam;
+ *   3. se não atingiu o mínimo de réplicas (`minReplicas`), faz
+ *      novas tentativas (retries) apenas para os que falharam;
+ *   4. se, mesmo após os retries, não atingiu o mínimo, lança
+ *      RemoteException para o chamador lidar com a falha.
+ *
+ *  @Estruturas internas:
+ *   - `barrels` (CopyOnWriteArrayList):
+ *       lista dinâmica de réplicas conhecidas; pode crescer e encolher
+ *       em runtime (`addBarrel()` / `removeBarrel()`).
+ *   - `sentMessages` (ConcurrentHashMap.newKeySet()):
+ *       conjunto de IDs de mensagens já enviadas, para evitar
+ *       processamento duplicado quando há reenvios.
+ *
+ *  @Parâmetros de fiabilidade:
+ *   - `minReplicas` — nº mínimo de barrels que têm de confirmar
+ *     para considerar o multicast bem-sucedido.
+ *   - `maxRetries` — nº máximo de tentativas adicionais.
+ *   - `retryDelayMs` — tempo de espera entre tentativas.
+ *
+ *  @Fluxo do método principal (sendDocument):
+ *   1. Gera um ID de mensagem a partir do URL e do timestamp.
+ *   2. Se for duplicado, ignora.
+ *   3. Envia em paralelo (thread pool) o `addDocument(page)` para
+ *      todos os barrels.
+ *   4. Conta quantos confirmaram.
+ *   5. Se for menos que o mínimo, passa para fase de retries.
+ *   6. Se mesmo assim não atingir o mínimo → RemoteException.
+ *   7. Caso contrário, devolve um {@code MulticastResult} com o nº
+ *      de entregas bem-sucedidas e falhadas.
+ *
+ *  @Integração no projeto:
+ *   - Esta classe deve ser usada pelo **Downloader** (ou pelo
+ *     coordenador de download) em vez de chamar diretamente
+ *     `barrel.addDocument(...)`.
+ *   - Os Barrels continuam simples e passivos; a inteligência de
+ *     replicação está do lado do emissor.
+ *
+ *  @Plano futuro:
+ *   - Substituir o ID de mensagem baseado em timestamp por um
+ *     sequenciador global.
+ *   - Adicionar detecção de falhas com heartbeats e remoção
+ *     automática de réplicas mortas.
+ *   - Suportar ordenação total das mensagens (total order multicast)
+ *     se vier a ser necessário para o projeto.
+ *
+ *  @Autor:
+ *   - Implementado no contexto do elemento 2 como parte da
+ *     componente de replicação do índice.
+ */
+
 package pt.uc.sd.googol.multicast;
 
-import pt.uc.sd.googol.barrel.BarrelInterface;
-import pt.uc.sd.googol.common.PageInfo;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import pt.uc.sd.googol.barrel.BarrelInterface;
+import pt.uc.sd.googol.common.PageInfo;
 
 /**
  * Implementação de um protocolo de Multicast Fiável sobre RMI.

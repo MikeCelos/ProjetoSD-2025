@@ -1,8 +1,56 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 1
+ *  Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
+ *  Ficheiro: BarrelInterface.java
+ * ===============================================================
+ *
+ *  @Resumo:
+ *  Interface RMI que define o contrato remoto entre o Gateway,
+ *  o Downloader e os Barrels. É a camada RPC responsável por
+ *  expor os métodos de indexação, pesquisa e monitorização do
+ *  sistema distribuído.
+ *
+ *  @Arquitetura:
+ *  O Barrel é um servidor RMI registado no Registry sob o nome
+ *  "barrel<ID>". Através desta interface, outros módulos do
+ *  sistema (Downloader e Gateway) podem comunicar com ele.
+ *
+ *  @Métodos:
+ *   - addDocument(PageInfo page):
+ *       Recebe uma página completa (URL, título, palavras, links)
+ *       e adiciona-a ao índice invertido e ao mapa de backlinks.
+ *
+ *   - search(List<String> terms, int page):
+ *       Executa a pesquisa de interseção de termos e devolve
+ *       resultados paginados (10 por página) ordenados por
+ *       relevância (número de backlinks).
+ *
+ *   - getBacklinks(String url):
+ *       Devolve as páginas que referenciam a URL fornecida.
+ *
+ *   - getStats():
+ *       Informa o número de páginas indexadas, termos e backlinks.
+ *
+ *   - ping():
+ *       Utilizado para heartbeat e deteção de falhas pelo Gateway.
+ *
+ *  @RMI e Failover:
+ *  Cada método pode lançar RemoteException, permitindo ao Gateway
+ *  detetar falhas e redirecionar as chamadas para outro Barrel
+ *  (failover transparente).
+ *
+ *  @Replicação:
+ *  Esta interface suporta múltiplas instâncias de Barrel no sistema,
+ *  facilitando replicação e balanceamento de carga.
+ */
+
 package pt.uc.sd.googol.barrel;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
+
 import pt.uc.sd.googol.common.PageInfo;
 import pt.uc.sd.googol.gateway.SearchResult;
 

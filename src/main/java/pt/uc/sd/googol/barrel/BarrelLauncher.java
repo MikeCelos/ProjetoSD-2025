@@ -1,3 +1,39 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 1
+ *  Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
+ *  Ficheiro: BarrelLauncher.java
+ * ===============================================================
+ *
+ *  @Resumo:
+ *  Classe auxiliar para lançar instâncias do IndexStorageBarrel
+ *  de forma independente, com IDs e portas personalizadas.
+ *  Permite executar múltiplos barrels (replicação horizontal)
+ *  sem alterar o código principal.
+ *
+ *  @Arquitetura:
+ *  - Lê os argumentos de linha de comando:
+ *      arg0 → barrelId
+ *      arg1 (opcional) → porto RMI
+ *  - Garante que existe um RMI Registry ativo na porta indicada.
+ *  - Cria uma instância de IndexStorageBarrel(barrelId).
+ *  - Regista o objeto remoto com o nome "barrel<id>" no registry.
+ *
+ *  @Execução:
+ *  Exemplos:
+ *      mvn exec:java -Dexec.mainClass="pt.uc.sd.googol.barrel.BarrelLauncher" -Dexec.args="0 1099"
+ *      mvn exec:java -Dexec.mainClass="pt.uc.sd.googol.barrel.BarrelLauncher" -Dexec.args="1 1100"
+ *
+ *  @Comunicação:
+ *  O Launcher não comunica diretamente com outros módulos;
+ *  apenas cria o ambiente RMI e mantém o processo vivo para
+ *  aceitar chamadas remotas.
+ *
+ *  @Plano futuro:
+ *  Automatizar o arranque de múltiplos barrels via Makefile e
+ *  adicionar monitorização de estado (heartbeats).
+ */
+
 package pt.uc.sd.googol.barrel;
 
 import java.rmi.registry.LocateRegistry;

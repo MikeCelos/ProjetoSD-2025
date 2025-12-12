@@ -1,11 +1,55 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 2
+ *  Ficheiro: HackerNewsService.java
+ * ===============================================================
+ *
+ *  @Resumo:
+ *  Serviço responsável pela integração entre o sistema GOOGOL
+ *  e a API REST pública do Hacker News (Y Combinator).
+ *
+ *  Esta classe permite incorporar conteúdo externo no motor de
+ *  pesquisa distribuído, atuando como ponte entre:
+ *   - a camada Web (Spring Boot),
+ *   - uma API REST externa (Hacker News),
+ *   - e o backend distribuído acessível via RMI (Gateway).
+ *
+ *  @Responsabilidades principais:
+ *  <ul>
+ *    <li>Consultar a API do Hacker News para obter as "Top Stories".</li>
+ *    <li>Obter os detalhes completos de cada item (título, URL, etc.).</li>
+ *    <li>Filtrar histórias com base nos termos de pesquisa do utilizador.</li>
+ *    <li>Submeter URLs relevantes ao Gateway para indexação.</li>
+ *  </ul>
+ *
+ *  @Papel na arquitetura:
+ *  - Executa na camada Web (Spring Boot).
+ *  - Consome dados externos via HTTP/REST.
+ *  - Comunica com o backend distribuído através de RMI.
+ *  - Não executa crawling nem indexação diretamente.
+ *
+ *  @Tecnologias utilizadas:
+ *  - Spring {@link Service} para gestão do ciclo de vida.
+ *  - {@link RestTemplate} para consumo de serviços REST externos.
+ *  - RMI para comunicação com o Gateway.
+ *
+ *  @Limitações e decisões de desenho:
+ *  - O número de histórias processadas é limitado (50) para evitar
+ *    latências excessivas e sobrecarga da API externa.
+ *  - O filtro é realizado apenas sobre o título da história.
+ *  - Falhas individuais não interrompem o processamento global.
+ *
+ *  @Autor:
+ *   André Ramos — 2023227306
+ */
+
 package pt.uc.sd.googol.web.service;
 
-import pt.uc.sd.googol.web.model.HackerNewsItemRecord;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import pt.uc.sd.googol.gateway.GatewayInterface;
 
-import java.rmi.RemoteException;
+import pt.uc.sd.googol.gateway.GatewayInterface;
+import pt.uc.sd.googol.web.model.HackerNewsItemRecord;
 
 /**
  * Serviço responsável pela integração com a API REST do Hacker News.

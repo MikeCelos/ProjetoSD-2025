@@ -1,10 +1,76 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 1
+ *  Elemento 1: Andre Fonseca Ramos (2023227306)
+ *  Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
+ * 
+ *  Ficheiro: GoogolClient.java
+ * ===============================================================
+ *
+ *  @Resumo:
+ *  Este módulo implementa o cliente do sistema distribuído GOOGOL,
+ *  que serve de interface de interação entre o utilizador e o motor
+ *  de pesquisa distribuído. Permite efetuar pesquisas de texto e
+ *  adicionar novas URLs para indexação através do Gateway remoto.
+ *
+ *  @Arquitetura:
+ *  - O cliente comunica via RMI com o Gateway principal, registado
+ *    no RMI Registry na porta 2000 sob o nome "gateway".
+ *  - O Gateway atua como intermediário entre o cliente e as demais
+ *    componentes do sistema (Downloaders e Barrels).
+ *  - O cliente é independente, não mantém estado nem cache local.
+ *
+ *  @Fluxo de execução:
+ *   1. Liga-se ao Registry em "localhost:2000".
+ *   2. Obtém referência remota ao Gateway via lookup("gateway").
+ *   3. Apresenta um menu de três opções:
+ *       - Pesquisar: envia a query textual ao Gateway.
+ *       - Adicionar URL: envia um endereço web para indexação.
+ *       - Sair: termina o programa.
+ *
+ *  @Interação:
+ *  - Pesquisar:
+ *      A query é enviada para o Gateway, que contacta um ou mais
+ *      Barrels (indexadores) através de RMI e devolve uma lista
+ *      de objetos SearchResult.
+ *      O cliente imprime o título e o URL de cada resultado.
+ *
+ *  - Adicionar URL:
+ *      O utilizador insere um endereço (ex: www.uc.pt); o cliente
+ *      envia-o ao Gateway, que o repassa ao Downloader para futura
+ *      análise e indexação.
+ *
+ *  - Sair:
+ *      Termina a execução e fecha o Scanner de entrada.
+ *
+ *  @RMI:
+ *  - O cliente atua como consumidor RPC, nunca exporta objetos RMI.
+ *  - Liga-se ao Gateway remoto e invoca métodos:
+ *        List<SearchResult> search(String query)
+ *        String addURL(String url)
+ *
+ *  @Failover:
+ *  - A gestão de falhas não é local ao cliente; se a ligação ao
+ *    Gateway falhar, a exceção é apresentada no terminal.
+ *  - O failover entre gateways (se existir) é da responsabilidade
+ *    do próprio Gateway.
+ *
+ *  @Plano futuro:
+ *   - Implementar reconexão automática em caso de falha do Gateway.
+ *   - Adicionar formatação dos resultados (título, snippet, score).
+ *   - Possibilidade de histórico local de pesquisas.
+ */
+
 package pt.uc.sd.googol.client;
+
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Scanner;
 
 import pt.uc.sd.googol.gateway.GatewayInterface;
 import pt.uc.sd.googol.gateway.SearchResult;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.util.*;
 
 /**
  * Cliente RMI para o sistema de motor de busca Googol.

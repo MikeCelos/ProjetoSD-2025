@@ -1,11 +1,14 @@
 package pt.uc.sd.googol.downloader;
 
-import org.jsoup.Jsoup;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.jsoup.Jsoup;
 
 /**
  * Analisador de ficheiros robots.txt (Robot Exclusion Standard).

@@ -1,16 +1,92 @@
-package pt.uc.sd.googol.gateway;
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 1
+ *  Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
+ *  Ficheiro: Gateway.java
+ * ===============================================================
+ *
+ *  @Resumo:
+ *  Implementação do Gateway principal do sistema distribuído GOOGOL.
+ *  É o ponto central de comunicação entre:
+ *   - os Clientes (interface de pesquisa e adição de URLs),
+ *   - os Barrels (indexadores e armazenadores de páginas),
+ *   - e o Downloader (módulo de crawling e extração de conteúdo).
+ *
+ *  O Gateway atua como intermediário, fornecendo uma interface única
+ *  RMI para os clientes enquanto gere a distribuição das chamadas e
+ *  o failover entre múltiplos Barrels disponíveis.
+ *
+ *  @Arquitetura:
+ *  - Estende UnicastRemoteObject, tornando o Gateway acessível via RMI.
+ *  - É registado no RMI Registry na porta 2000 com o nome "gateway".
+ *  - Mantém:
+ *      • Uma lista de referências remotas para os Barrels.
+ *      • Uma referência remota para o Downloader.
+ *  - Implementa um esquema simples de balanceamento round-robin para
+ *    distribuir as pesquisas pelos Barrels.
+ *
+ *  @Fluxo principal:
+ *   1. Ao iniciar, conecta-se a cada Barrel indicado na lista de hosts.
+ *   2. Em seguida, tenta ligar ao Downloader remoto.
+ *   3. Fica registado no Registry e aguarda chamadas dos clientes.
+ *
+ *  @Métodos remotos:
+ *   - search(String query):
+ *       Recebe uma query textual, separa-a em termos e distribui a
+ *       pesquisa por um dos Barrels (round-robin). Cada Barrel devolve
+ *       uma lista de objetos SearchResult. Se um Barrel falhar, o Gateway
+ *       tenta automaticamente o seguinte (failover simples).
+ *
+ *   - addURL(String url):
+ *       Recebe um URL de um cliente e encaminha-o para o Downloader,
+ *       que o adiciona à fila de URLs a visitar. Caso o Downloader não
+ *       esteja disponível, devolve uma mensagem de erro informativa.
+ *
+ *  @Comunicação entre componentes:
+ *  - Cliente → Gateway:
+ *        O cliente invoca remotamente search() e addURL().
+ *  - Gateway → Barrel:
+ *        O Gateway chama barrel.search(terms, page) via RMI.
+ *  - Gateway → Downloader:
+ *        O Gateway invoca downloader.addURL(url) via RMI.
+ *
+ *  @Failover e Resiliência:
+ *  - Se um Barrel falhar durante a pesquisa, o Gateway apanha a
+ *    RemoteException e tenta o próximo (round-robin + retry).
+ *  - Se o Downloader estiver offline, o Gateway mantém-se funcional
+ *    e avisa o cliente (“Recebi o URL mas não tenho downloader ligado”).
+ *
+ *  @Planos futuros:
+ *   - Implementar replicação de estado entre múltiplos Gateways.
+ *   - Adicionar balanceamento de carga dinâmico (com base em métricas).
+ *   - Implementar cache de queries frequentes para reduzir latência.
+ *   - Detetar automaticamente novos Barrels registados no RMI Registry.
+ *
+ *  @Execução:
+ *  Exemplo de arranque:
+ *      mvn exec:java -Dexec.mainClass="pt.uc.sd.googol.gateway.Gateway"
+ *
+ *  @Notas:
+ *   - A porta padrão do Gateway é 2000.
+ *   - Os Barrels escutam em 1099 e o Downloader em 1200.
+ *   - O Gateway é stateless e pode ser reiniciado sem perda de dados.
+ */
 
-import pt.uc.sd.googol.barrel.BarrelInterface;
-import pt.uc.sd.googol.queue.URLQueueInterface;
+package pt.uc.sd.googol.gateway;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
+
+import pt.uc.sd.googol.barrel.BarrelInterface;
+import pt.uc.sd.googol.queue.URLQueueInterface;
 
 /**
  * Ponto de entrada (Gateway) do sistema Googol.

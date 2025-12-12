@@ -1,3 +1,53 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 1 / Meta 2
+ *  Elemento 1: Andre Fonseca Ramos (2023227306)
+ *  Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
+ *  Ficheiro: GatewayInterface.java
+ * ===============================================================
+ *
+ *  @Resumo:
+ *  Interface RMI que define o contrato do Gateway do sistema distribuído GOOGOL.
+ *  O Gateway funciona como ponto único de entrada para os clientes (CLI e Web),
+ *  abstraindo a complexidade interna da arquitetura distribuída.
+ *
+ *  Esta interface expõe operações para:
+ *   - pesquisa no índice distribuído,
+ *   - indexação manual de URLs,
+ *   - obtenção de backlinks,
+ *   - monitorização do estado do sistema,
+ *   - recolha de estatísticas globais.
+ *
+ *  @Papel na arquitetura:
+ *  - Implementa o padrão *Facade* sobre o sistema distribuído.
+ *  - É acedida remotamente via RMI pelos clientes.
+ *  - Encaminha pedidos para:
+ *      • Barrels (pesquisa e backlinks),
+ *      • Queue / Downloader (indexação),
+ *      • módulos internos de estatísticas.
+ *
+ *  @Comunicação:
+ *  Cliente → GatewayInterface → Gateway (implementação)
+ *     → Barrels (search, backlinks)
+ *     → Downloader / Queue (indexação)
+ *
+ *  @Notas de desenho:
+ *  - Todos os métodos lançam {@link RemoteException}, conforme exigido por RMI.
+ *  - O Gateway é logicamente *stateless* relativamente às pesquisas.
+ *  - O balanceamento de carga e tolerância a falhas são responsabilidade da
+ *    implementação concreta do Gateway.
+ *
+ *  @Extensibilidade:
+ *  Esta interface foi desenhada para permitir extensões futuras, como:
+ *   - Paginação avançada,
+ *   - Cache de resultados,
+ *   - Múltiplos Gateways em paralelo,
+ *   - Métricas detalhadas por Barrel ou Downloader.
+ *
+ *  @Autor:
+ *   André Ramos — 2023227306
+ */
+
 package pt.uc.sd.googol.gateway;
 
 import java.rmi.Remote;

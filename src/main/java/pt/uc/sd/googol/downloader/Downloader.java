@@ -1,15 +1,39 @@
+/**
+ * <h1>Downloader</h1>
+ *
+ * <p>Classe principal do módulo de download (Web crawler) do sistema Googol.
+ * Este componente é responsável por:
+ * <ul>
+ *     <li>Gerir a fila de URLs a visitar ({@link URLQueue})</li>
+ *     <li>Controlar múltiplos {@link DownloaderWorker} executando em paralelo</li>
+ *     <li>Respeitar as políticas de acesso definidas nos ficheiros <code>robots.txt</code></li>
+ *     <li>Comunicar com os servidores {@link pt.uc.sd.googol.barrel.BarrelInterface} via RMI</li>
+ *     <li>Expor uma interface RMI ({@link DownloaderInterface}) para o Gateway introduzir novos URLs</li>
+ * </ul>
+ *
+ * <p>Este componente executa como servidor RMI e como cliente RMI do Barrel.
+ * É uma parte essencial da arquitetura distribuída do Googol.
+ *
+ * @author elemento 1 André Ramos 2023227306
+ * @version 1.0
+ * @see DownloaderWorker
+ * @see URLQueue
+ * @see RobotsTxtParser
+ * @see pt.uc.sd.googol.barrel.BarrelInterface
+ */
+
 package pt.uc.sd.googol.downloader;
 
-import pt.uc.sd.googol.barrel.BarrelInterface;
-import pt.uc.sd.googol.multicast.ReliableMulticast;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import pt.uc.sd.googol.barrel.BarrelInterface;
+import pt.uc.sd.googol.multicast.ReliableMulticast;
 import pt.uc.sd.googol.queue.URLQueueInterface;
 
 /**

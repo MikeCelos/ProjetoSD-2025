@@ -1,3 +1,5 @@
+
+
 <!doctype html>
 <html lang="pt">
 <head>
@@ -5,11 +7,19 @@
     <title>Googol - Motor de Pesquisa</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
+    <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
+        .google-letter {
+            font-weight: 700;
+            display: inline-block;
+            font-size: 1.8rem;
+        }
+
         :root {
             --bg-gradient: linear-gradient(135deg, #1b1b1b, #1c1c1c, #171717);
             --glass-bg: rgba(34, 34, 34, 0.8);
@@ -62,7 +72,7 @@
         }
 
         .brand-logo {
-           width: 64px;
+            width: 64px;
             height: 64px;
             border-radius: 20px;
             background-image: url("/img/logo_bw_circular.png");
@@ -75,6 +85,7 @@
             font-weight: 700;
             letter-spacing: 0.08em;
             font-size: 1.1rem;
+            min-width: 7ch;
         }
 
         .brand-text-sub {
@@ -115,7 +126,9 @@
         }
 
         @media (max-width: 991px) {
-            .main-layout { grid-template-columns: minmax(0, 1fr); }
+            .main-layout {
+                grid-template-columns: minmax(0, 1fr);
+            }
         }
 
         .search-panel {
@@ -123,39 +136,16 @@
             border-radius: var(--radius-xl);
             box-shadow: var(--shadow-soft);
             border: 1px solid rgba(148, 163, 184, 0.28);
-            padding: 22px 22px 18px;
+            padding: 22px;
             backdrop-filter: blur(22px);
         }
 
-        .search-header {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-bottom: 16px;
-        }
-
-        .search-title {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .search-title h1 {
-            font-size: 1.1rem;
-            margin: 0;
-            font-weight: 600;
-        }
-
+        .search-header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+        .search-title { display: flex; justify-content: space-between; align-items: center; }
+        .search-title h1 { font-size: 1.1rem; margin: 0; font-weight: 600; }
         .search-subtitle { font-size: 0.8rem; color: var(--text-muted); }
 
-        .search-chip-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            font-size: 0.7rem;
-        }
-
+        .search-chip-row { display: flex; flex-wrap: wrap; gap: 6px; font-size: 0.7rem; }
         .search-chip {
             padding: 4px 10px;
             border-radius: 999px;
@@ -164,7 +154,6 @@
         }
 
         .search-main { margin-top: 4px; margin-bottom: 8px; }
-
         .search-input-wrapper {
             display: flex;
             align-items: center;
@@ -175,22 +164,7 @@
             background-color: rgba(15, 23, 42, 0.9);
         }
 
-        .search-input-wrapper:focus-within {
-            border-color: #22c55e;
-            box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35);
-        }
-
-        .search-icon { font-size: 0.95rem; color: var(--text-muted); }
-
-        .search-input {
-            flex: 1;
-            border: none;
-            outline: none;
-            background: transparent;
-            color: var(--text-main);
-            font-size: 0.95rem;
-        }
-
+        .search-input { flex: 1; border: none; outline: none; background: transparent; color: var(--text-main); }
         .search-input::placeholder { color: #6b7280; }
 
         .search-button-main {
@@ -202,25 +176,11 @@
             background: linear-gradient(135deg, #22c55e, #16a34a);
             color: #020617;
             display: inline-flex;
-            align-items: center;
             gap: 6px;
-            transition: transform 0.08s ease, box-shadow 0.08s ease;
-            white-space: nowrap;
+            transition: transform 0.08s ease;
         }
 
-        .search-button-main:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 25px rgba(34, 197, 94, 0.35);
-        }
-
-        .search-button-main span.icon { font-size: 1rem; }
-
-        .search-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
+        .search-button-main:hover { transform: translateY(-1px); box-shadow: 0 10px 25px rgba(34, 197, 94, 0.35); }
 
         .btn-ghost {
             border-radius: 999px;
@@ -230,245 +190,70 @@
             background-color: rgba(15, 23, 42, 0.9);
             color: var(--text-muted);
             display: inline-flex;
-            align-items: center;
             gap: 6px;
         }
 
-        .btn-ghost .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 999px;
-            background: #f97316;
-        }
-
+        .btn-ghost .dot { width: 8px; height: 8px; border-radius: 999px; }
+        .btn-ghost .dot { background: #f97316; }
         .btn-ghost.ai .dot { background: #38bdf8; }
-
-        .btn-ghost:hover {
-            background-color: rgba(30, 64, 175, 0.4);
-            color: #e5e7eb;
-        }
-
-        .divider-soft {
-            margin: 12px 0 10px;
-            border-top: 1px solid rgba(148, 163, 184, 0.24);
-        }
-
-        .results-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-
-        .results-count { font-size: 0.75rem; color: var(--text-muted); }
-
-        .results-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
 
         .result-card {
             padding: 10px 12px;
             border-radius: 12px;
             border: 1px solid rgba(30, 64, 175, 0.45);
-            background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.05), rgba(15, 23, 42, 1));
-            transition: border-color 0.12s ease, transform 0.08s ease, background 0.12s ease;
+            background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.05), rgba(15,23,42,1));
         }
 
         .result-card:hover {
-            border-color: rgba(56, 189, 248, 0.9);
+            border-color: rgba(56,189,248,0.9);
             transform: translateY(-1px);
-            background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), rgba(15, 23, 42, 1));
-        }
-
-        .result-title-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            align-items: baseline;
-        }
-
-        .result-title {
-            font-size: 0.95rem;
-            font-weight: 500;
-            margin: 0 0 2px;
-            color: #e5e7eb;
-        }
-
-        .result-score { font-size: 0.75rem; color: var(--text-muted); }
-
-        .result-url {
-            font-size: 0.75rem;
-            color: #353635;
-            word-break: break-all;
-        }
-
-        .result-snippet {
-            font-size: 0.8rem;
-            color: #9ca3af;
-            margin-bottom: 4px;
-        }
-
-        .result-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.7rem;
-            color: var(--text-muted);
-        }
-
-        .result-meta a {
-            color: #60a5fa; /* Cor melhorada para contraste */
-            text-decoration: none;
-        }
-
-        .result-meta a:hover { text-decoration: underline; }
-
-        .results-empty { font-size: 0.85rem; color: var(--text-muted); }
-
-        .pagination-wrap { margin-top: 10px; }
-
-        .pagination-sm .page-link {
-            background-color: rgba(15, 23, 42, 0.9);
-            border-color: rgba(148, 163, 184, 0.3);
-            color: var(--text-muted);
-            font-size: 0.75rem;
-        }
-
-        .pagination-sm .page-link:hover {
-            background-color: rgba(37, 99, 235, 0.4);
-            color: #e5e7eb;
-        }
-
-        .pagination-sm .page-item.active .page-link {
-            background-color: #2563eb;
-            border-color: #2563eb;
-            color: white;
-        }
-
-        /* --- NOVO ESTILO PARA A CAIXA DE IA --- */
-        .ai-box {
-            background: linear-gradient(to right, rgba(34, 197, 94, 0.1), rgba(15, 23, 42, 0.6));
-            border-left: 4px solid #22c55e;
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            margin-top: 5px;
-            border-top: 1px solid rgba(34, 197, 94, 0.2);
-            border-bottom: 1px solid rgba(34, 197, 94, 0.1);
-            border-right: 1px solid rgba(34, 197, 94, 0.1);
-        }
-        
-        .ai-title {
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #22c55e;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .ai-content {
-            font-size: 0.95rem;
-            color: #e5e7eb;
-            line-height: 1.5;
-            margin: 0;
-        }
-
-        .side-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
         }
 
         .side-card {
-            background: rgba(15, 23, 42, 0.75);
+            background: rgba(15,23,42,0.75);
             border-radius: 16px;
-            border: 1px solid rgba(148, 163, 184, 0.26);
-            padding: 14px 14px 12px;
+            border: 1px solid rgba(148,163,184,0.26);
+            padding: 14px;
             backdrop-filter: blur(18px);
-        }
-
-        .side-title {
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.09em;
-            color: #a5b4fc;
-            margin-bottom: 8px;
-        }
-
-        .side-list {
-            list-style: none;
-            margin: 0;
-            padding-left: 0;
-            font-size: 0.78rem;
-            color: var(--text-muted);
-        }
-
-        .side-list li + li { margin-top: 4px; }
-
-        .stat-number { font-weight: 600; color: #e5e7eb; }
-
-        ol.side-list { counter-reset: topq; }
-
-        ol.side-list li {
-            counter-increment: topq;
-            position: relative;
-            padding-left: 18px;
-        }
-
-        ol.side-list li::before {
-            content: counter(topq) ".";
-            position: absolute;
-            left: 0;
-            top: 0;
-            color: #4ade80;
-        }
-
-        .side-footer {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            margin-top: 4px;
         }
     </style>
 </head>
+
+<!-- Som da máquina de escrever -->
+<audio id="typeSound" src="/sounds/type.mp3" preload="auto"></audio>
+
 <body>
 <div class="page-shell">
 
+    <!-- Top bar -->
     <header class="top-nav">
         <div class="brand">
             <div class="brand-logo"></div>
             <div>
-                <div class="brand-text-main">GOOGOL</div>
+                <div class="brand-text-main" id="brand-typing"></div>
                 <div class="brand-text-sub">Distributed search · Meta 2</div>
             </div>
         </div>
         <div class="top-nav-right">
             <div class="badge-pill">
-                <span class="badge-dot"></span>
-                <span>Cluster online</span>
+                <span class="badge-dot"></span><span>Cluster online</span>
             </div>
             <span>SD · 2025/26</span>
         </div>
     </header>
 
+    <!-- GRID -->
     <main class="main-layout">
 
+        <!-- SEARCH PANEL -->
         <section class="search-panel">
 
             <div class="search-header">
                 <div class="search-title">
                     <h1>Explora a web indexada pelo teu cluster</h1>
-                    <span class="search-subtitle d-none d-md-inline">
-                        Gateway · Barrels · Downloaders em tempo real
-                    </span>
+                    <span class="search-subtitle d-none d-md-inline">Gateway · Barrels · Downloaders em tempo real</span>
                 </div>
+
                 <div class="search-chip-row">
                     <span class="search-chip">Multicast fiável</span>
                     <span class="search-chip">Índice invertido</span>
@@ -477,228 +262,213 @@
                 </div>
             </div>
 
+            <!-- SEARCH BOX -->
             <div class="search-main">
-                <form id="search-form"
-                      class="d-flex align-items-center gap-2"
-                      method="get"
-                      action="/search"
-                      th:action="@{/search}">
+                <form method="get" action="/search" class="d-flex align-items-center gap-2">
                     <div class="search-input-wrapper">
                         <span class="search-icon">⌕</span>
-                        <input type="text"
-                               class="search-input"
-                               name="q"
-                               th:value="${query}"
-                               placeholder="O que queres procurar?"
-                               required>
+                        <input type="text" class="search-input" name="q" placeholder="O que queres procurar?" required>
                     </div>
                     <button type="submit" class="search-button-main">
-                        <span class="icon">↵</span>
-                        <span>Pesquisar</span>
+                        <span class="icon">↵</span><span>Pesquisar</span>
                     </button>
                 </form>
 
                 <div class="search-actions">
-                    <form id="hn-form" method="post"
-                          action="/search/hacker-news"
-                          th:action="@{/search/hacker-news}">
-                        <input type="hidden" name="q" th:value="${query}">
-                        <button class="btn-ghost" type="submit">
-                            <span class="dot"></span>
-                            <span>Indexar top stories do Hacker News</span>
-                        </button>
+                    <form method="post" action="/search/hacker-news">
+                        <button class="btn-ghost"><span class="dot"></span>Indexar top stories do Hacker News</button>
                     </form>
-                    
+
+                    <form method="post" action="/search/analysis">
+                        <button class="btn-ghost ai"><span class="dot"></span>Análise da pesquisa com IA</button>
+                    </form>
                 </div>
             </div>
 
             <hr class="divider-soft">
 
-            <div class="alert alert-success mt-2" role="alert" th:if="${successMessage}" th:text="${successMessage}"></div>
-            <div class="alert alert-danger mt-2" role="alert" th:if="${errorMessage}" th:text="${errorMessage}"></div>
-
+            <!-- INDEX URL -->
             <section>
-                <form id="index-form"
-                      class="row g-2 align-items-center"
-                      method="post"
-                      action="/index"
-                      th:action="@{/index}">
+                <form class="row g-2 align-items-center" method="post" action="/index">
                     <div class="col-md-9">
-                        <input type="url"
-                               class="form-control form-control-sm"
-                               name="url"
-                               placeholder="Adicionar novo URL ao sistema (https://...)"
+                        <input type="url" class="form-control form-control-sm"
+                               name="url" placeholder="Adicionar novo URL ao sistema (https://...)"
                                required
-                               style="background-color: rgba(15,23,42,0.9); border-color: rgba(148,163,184,0.5); color: var(--text-main);">
+                               style="background-color: rgba(15,23,42,0.9);
+                                      border-color: rgba(148,163,184,0.5);
+                                      color: var(--text-main);">
                     </div>
                     <div class="col-md-3 d-grid">
-                        <button type="submit" class="btn btn-sm btn-outline-success">
-                            Adicionar à fila
-                        </button>
+                        <button type="submit" class="btn btn-sm btn-outline-success">Adicionar à fila</button>
                     </div>
                 </form>
             </section>
 
             <hr class="divider-soft">
 
+            <!-- RESULTS -->
             <section>
-                <div class="results-header">
-                    <div class="results-count"
-                         th:if="${totalResults != null}"
-                         th:text="${totalResults} + ' resultados encontrados'">
-                        Não há resultados ainda.
-                    </div>
-                    <div class="results-count"
-                         th:if="${query != null}">
-                        <span th:text="'Consulta: «' + ${query} + '»'"></span>
-                    </div>
+                <div class="results-count" th:if="${totalResults != null}"
+                     th:text="${totalResults} + ' resultados encontrados'">
+                    Não há resultados ainda.
                 </div>
 
-                <div class="ai-box" th:if="${aiAnalysis != null}">
-                    <div class="ai-title">
-                        <span>✦</span> Análise Inteligente (IA)
-                    </div>
-                    <p class="ai-content" th:text="${aiAnalysis}">
-                        ...
-                    </p>
-                </div>
-                <div th:if="${results == null or #lists.isEmpty(results)}">
-                    <p class="results-empty">
-                        Faz uma pesquisa ou adiciona URLs para começares a ver o teu próprio motor de pesquisa distribuído a funcionar.
-                    </p>
-                </div>
-
-                <div class="results-list"
-                     th:if="${results != null and !#lists.isEmpty(results)}">
-                    <a href="#"
-                       class="result-card text-decoration-none"
-                       th:each="r : ${results}"
-                       th:href="${r.url}">
+                <div class="results-list" th:if="${results != null}">
+                    <a class="result-card text-decoration-none"
+                       th:each="r : ${results}" th:href="${r.url}">
                         <div class="result-title-row">
-                            <h2 class="result-title" th:text="${r.title}">Título da página</h2>
-                            <span class="result-score"
-                                    th:text="'Score: ' + ${r.relevance}">
-                                Score: 0
-                            </span>
+                            <h2 class="result-title" th:text="${r.title}"></h2>
+                            <span class="result-score" th:text="'Score: ' + ${r.relevance}">Score: 0</span>
                         </div>
-                        <div class="result-url"
-                             th:text="${r.url}">
-                            https://exemplo.com/pagina
-                        </div>
-                        <p class="result-snippet"
-                           th:text="${r.snippet}">
-                            Exemplo de snippet de conteúdo indexado...
-                        </p>
+                        <div class="result-url" th:text="${r.url}"></div>
+                        <p class="result-snippet" th:text="${r.snippet}"></p>
                         <div class="result-meta">
                             <span>Servido a partir de Barrels distribuídos</span>
-                            <a href="#"
-                               th:href="@{'/links?url=' + ${r.url}}">
-                                Ver páginas que apontam para este URL
-                            </a>
                         </div>
                     </a>
                 </div>
 
-                <div class="pagination-wrap"
-                     th:if="${totalPages > 1}">
-                    <nav aria-label="Paginação de resultados">
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item"
-                                th:classappend="${currentPage == 0} ? ' disabled'">
-                                <a class="page-link"
-                                   th:href="@{/search(q=${query}, page=${currentPage - 1})}">
-                                    Anterior
-                                </a>
-                            </li>
-                            <li class="page-item"
-                                th:each="p : ${#numbers.sequence(0, totalPages - 1)}"
-                                th:classappend="${p == currentPage} ? ' active'">
-                                <a class="page-link"
-                                   th:text="${p + 1}"
-                                   th:href="@{/search(q=${query}, page=${p})}">
-                                    1
-                                </a>
-                            </li>
-                            <li class="page-item"
-                                th:classappend="${currentPage == totalPages - 1} ? ' disabled'">
-                                <a class="page-link"
-                                   th:href="@{/search(q=${query}, page=${currentPage + 1})}">
-                                    Seguinte
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
+                <div class="mt-3" th:if="${aiAnalysis != null}">
+                    <div class="search-subtitle mb-1">Análise da pesquisa</div>
+                    <p style="font-size: 0.82rem; color: var(--text-muted);" th:text="${aiAnalysis}"></p>
                 </div>
             </section>
         </section>
 
+        <!-- SIDE PANEL -->
         <aside class="side-panel">
-
             <section class="side-card">
-                <div class="side-title">Estatisticas</div>
+                <div class="side-title">Estado do cluster</div>
                 <ul class="side-list">
-                    <li>Downloaders ativos: <span id="stats-downloaders" class="stat-number">-</span></li>
-                    <li>Barrels ativos: <span id="stats-barrels" class="stat-number">-</span></li>
-                    <li>URLs na fila: <span id="stats-queue-size" class="stat-number">-</span></li>
+                    <li>Downloaders ativos: <span id="stats-downloaders">-</span></li>
+                    <li>Barrels ativos: <span id="stats-barrels">-</span></li>
+                    <li>URLs na fila: <span id="stats-queue-size">-</span></li>
                 </ul>
-                <div class="side-footer">
-                    Atualizado em tempo real via WebSocket.
-                </div>
+                <div class="side-footer">Atualizado em tempo real via WebSocket.</div>
             </section>
 
             <section class="side-card">
                 <div class="side-title">Top 10 pesquisas</div>
-                <ol class="side-list" id="stats-top-queries">
-                    </ol>
+                <ol class="side-list" id="stats-top-queries"></ol>
             </section>
 
             <section class="side-card">
                 <div class="side-title">Latência dos Barrels</div>
-                <ul class="side-list" id="stats-latencies">
-                    </ul>
+                <ul class="side-list" id="stats-latencies"></ul>
             </section>
-
         </aside>
+
     </main>
 </div>
 
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 
+<!-- WebSocket stats -->
 <script>
-    (function () {
-        let socket = new SockJS('/ws-stats');
-        let stompClient = Stomp.over(socket);
-        stompClient.debug = null;
+(function () {
+    let socket = new SockJS('/ws-stats');
+    let stompClient = Stomp.over(socket);
+    stompClient.debug = null;
 
-        stompClient.connect({}, function () {
-            stompClient.subscribe('/topic/stats', function (message) {
-                const data = JSON.parse(message.body);
+    stompClient.connect({}, function () {
+        stompClient.subscribe('/topic/stats', function (message) {
+            const data = JSON.parse(message.body);
 
-                document.getElementById('stats-downloaders').textContent = data.downloadersActive;
-                document.getElementById('stats-barrels').textContent = data.barrelsActive;
-                document.getElementById('stats-queue-size').textContent = data.queueSize;
+            document.getElementById('stats-downloaders').textContent = data.downloadersActive;
+            document.getElementById('stats-barrels').textContent = data.barrelsActive;
+            document.getElementById('stats-queue-size').textContent = data.queueSize;
 
-                const topQueriesElem = document.getElementById('stats-top-queries');
-                topQueriesElem.innerHTML = '';
-                (data.topQueries || []).forEach(function (q) {
-                    const li = document.createElement('li');
-                    li.textContent = q;
-                    topQueriesElem.appendChild(li);
-                });
+            const topQueriesElem = document.getElementById('stats-top-queries');
+            topQueriesElem.innerHTML = '';
+            (data.topQueries || []).forEach(q => {
+                const li = document.createElement('li');
+                li.textContent = q;
+                topQueriesElem.appendChild(li);
+            });
 
-                const latenciesElem = document.getElementById('stats-latencies');
-                latenciesElem.innerHTML = '';
-                (data.barrelLatencies || []).forEach(function (b) {
-                    const li = document.createElement('li');
-                    li.textContent = 'Barrel ' + b.barrelId + ': ' + b.avgMs + ' ms';
-                    latenciesElem.appendChild(li);
-                });
+            const latenciesElem = document.getElementById('stats-latencies');
+            latenciesElem.innerHTML = '';
+            (data.barrelLatencies || []).forEach(b => {
+                const li = document.createElement('li');
+                li.textContent = b.barrelId + ': ' + b.avgMs + ' ms';
+                latenciesElem.appendChild(li);
             });
         });
-    })();
+    });
+})();
+</script>
+
+<!-- Animated Google/Googol with sound -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const container = document.getElementById("brand-typing");
+    const sound = document.getElementById("typeSound");
+
+    const firstWord = "Google";
+    const secondWord = "Googol";
+
+    const googleColors = [
+        "#4285F4", "#EA4335", "#FBBC05",
+        "#4285F4", "#34A853", "#EA4335"
+    ];
+
+    const typeDelay = 180;
+    const deleteDelay = 110;
+
+    function playSound() {
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play();
+        }
+    }
+
+    function typeWord(word, done) {
+        container.innerHTML = "";
+        let index = 0;
+
+        function typeNext() {
+            if (index < word.length) {
+                const span = document.createElement("span");
+                span.textContent = word[index];
+                span.classList.add("google-letter");
+                span.style.color = googleColors[index % googleColors.length];
+
+                container.appendChild(span);
+                playSound();
+
+                index++;
+                setTimeout(typeNext, typeDelay);
+            } else {
+                setTimeout(done, 600);
+            }
+        }
+        typeNext();
+    }
+
+    function deleteWord(done) {
+        let letters = container.children;
+
+        function deleteNext() {
+            if (letters.length > 0) {
+                letters[letters.length - 1].remove();
+                playSound();
+                setTimeout(deleteNext, deleteDelay);
+            } else {
+                setTimeout(done, 300);
+            }
+        }
+        deleteNext();
+    }
+
+    typeWord(firstWord, () => {
+        deleteWord(() => {
+            typeWord(secondWord, () => {});
+        });
+    });
+});
 </script>
 
 </body>

@@ -1,7 +1,50 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 2
+ *  Ficheiro: HackerNewsItemRecord.java
+ * ===============================================================
+ *
+ *  @Resumo:
+ *  Modelo de dados (DTO) que representa um item devolvido pela
+ *  API pública do Hacker News (Y Combinator).
+ *
+ *  Esta classe é utilizada para mapear automaticamente respostas
+ *  JSON obtidas a partir do endpoint:
+ *      https://hacker-news.firebaseio.com/v0/item/{id}.json
+ *  para objetos Java, recorrendo à biblioteca Jackson.
+ *
+ *  @Papel no projeto:
+ *  - Utilizada pelo módulo Web / Gateway para consumir dados externos.
+ *  - Permite integrar fontes externas de conteúdo (Hacker News)
+ *    no motor de pesquisa GOOGOL.
+ *  - Os URLs extraídos desta classe são enviados para indexação
+ *    através do Gateway e Downloader.
+ *
+ *  @Integração com Jackson:
+ *  - A anotação {@link JsonIgnoreProperties} com {@code ignoreUnknown = true}
+ *    garante compatibilidade futura com alterações na API do Hacker News.
+ *  - Campos adicionais introduzidos pela API são ignorados automaticamente.
+ *
+ *  @Campos relevantes para o GOOGOL:
+ *  - {@code url}: endereço externo da notícia (campo crítico para indexação).
+ *  - {@code title}: título da história, usado para filtragem e apresentação.
+ *  - {@code score}: pontuação da notícia no Hacker News.
+ *
+ *  @Notas de desenho:
+ *  - Esta classe segue o padrão DTO (Data Transfer Object).
+ *  - Não contém lógica de negócio.
+ *  - Inclui construtor vazio obrigatório para deserialização JSON.
+ *
+ *  @Autor:
+ *   Elemento 1: André Ramos — 2023227306
+ *   Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
+ */
+
 package pt.uc.sd.googol.web.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * Modelo de dados (DTO) que representa um item (notícia, comentário, etc.) da API do Hacker News.

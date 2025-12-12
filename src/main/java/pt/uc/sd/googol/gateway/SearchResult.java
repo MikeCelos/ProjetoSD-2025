@@ -1,3 +1,43 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 1 / Meta 2
+ *  Ficheiro: SearchResult.java
+ * ===============================================================
+ *
+ *  @Resumo:
+ *  Objeto de Transferência de Dados (DTO) que representa um resultado
+ *  individual de uma pesquisa efetuada no motor de busca distribuído GOOGOL.
+ *
+ *  Cada instância desta classe corresponde a uma página indexada que
+ *  satisfaz uma determinada query, contendo informação suficiente para
+ *  apresentação ao utilizador final.
+ *
+ *  @Papel na arquitetura:
+ *  - Criado pelos Barrels após a execução de uma pesquisa.
+ *  - Transmitido ao Gateway através de RMI.
+ *  - Encaminhado pelo Gateway para os clientes (CLI ou Web).
+ *
+ *  @Características:
+ *  - Imutável (todos os campos são {@code final}).
+ *  - Implementa {@link Serializable}, permitindo transporte via RMI.
+ *  - Contém apenas dados (sem lógica de negócio).
+ *
+ *  @Campos representados:
+ *  - URL da página encontrada.
+ *  - Título da página.
+ *  - Excerto textual (snippet) relevante para a query.
+ *  - Pontuação de relevância (ex.: baseada em backlinks).
+ *
+ *  @Notas de desenho:
+ *  - Esta classe segue o padrão DTO (Data Transfer Object).
+ *  - Não contém setters para garantir integridade dos dados.
+ *  - A relevância é calculada nos Barrels e não no Gateway.
+ *
+ *  @Autor:
+ *   André Ramos — 2023227306
+ *   Francisco Vasconcelos e Sá Pires da Silva — 2023220012
+ */
+
 package pt.uc.sd.googol.gateway;
 
 import java.io.Serializable;
