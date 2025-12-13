@@ -1,5 +1,6 @@
 package pt.uc.sd.googol.barrel;
 
+import pt.uc.sd.googol.gateway.GatewayInterface;
 import pt.uc.sd.googol.common.PageInfo;
 import pt.uc.sd.googol.gateway.SearchResult;
 
@@ -37,6 +38,10 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
     
     // Flag de segurança para evitar gravar dados incompletos durante o arranque
     private volatile boolean isReady = false;
+
+    private pt.uc.sd.googol.gateway.GatewayInterface gateway; // Importante: usar o caminho completo ou importar
+    private final java.util.concurrent.atomic.AtomicInteger pendingChanges = new java.util.concurrent.atomic.AtomicInteger(0);
+    private static final int NOTIFICATION_THRESHOLD = 5;
     
     /**
      * Construtor do Barrel.
@@ -88,6 +93,16 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
         }));
     }
 
+    private void connectToGateway() {
+        try {
+            // Ajusta a porta (1099) se o teu Gateway estiver noutra porta
+            java.rmi.registry.Registry registry = java.rmi.registry.LocateRegistry.getRegistry("localhost", 1099);
+            this.gateway = (pt.uc.sd.googol.gateway.GatewayInterface) registry.lookup("gateway");
+        } catch (Exception e) {
+            System.err.println(" [Barrel] Erro ao conectar ao Gateway para notificações: " + e.getMessage());
+        }
+    }
+    
     /**
      * Tenta sincronizar dados a partir de outro Barrel ativo na rede.
      * Procura outros serviços "barrelX" no RMI Registry.
@@ -185,6 +200,21 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
         
         if (pages.size() % 10 == 0) { 
             System.out.println(" [Barrel" + barrelId + "] Total: " + pages.size());
+        }
+
+        int changes = pendingChanges.incrementAndGet();
+    
+        // Se atingir o limite, avisa o Gateway
+        if (changes >= NOTIFICATION_THRESHOLD) {
+            pendingChanges.set(0);
+            new Thread(() -> {
+                try {
+                    // Tens de ter referência para o gateway aqui
+                    if (gateway != null) gateway.barrelNotifyUpdate();
+                } catch (RemoteException e) {
+                    // Tratar erro de conexão
+                }
+            }).start();
         }
     }
 

@@ -49,6 +49,12 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     
     /** Registo de tempos de resposta por Barrel para cálculo de latência média. */
     private final Map<Integer, List<Long>> responseTimes;
+
+    private List<StatsListener> listeners = new CopyOnWriteArrayList<>();
+
+    private List<String> lastTop10 = new ArrayList<>();
+    private String lastBarrelState = ""; // Assinatura do estado dos barrels
+    private java.util.List<String> cachedTop10Strings = new java.util.ArrayList<>();
     
     /**
      * Construtor do Gateway.
@@ -72,6 +78,20 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
         
         System.out.println(" Gateway inicializado com " + barrels.size() + " barrels");
+    }
+
+    @Override
+    public void registerListener(StatsListener listener) throws RemoteException {
+        listeners.add(listener);
+        System.out.println("[Gateway] Novo listener registado.");
+        // Opcional: Enviar estado atual imediatamente para não ficar vazio
+        notifyListeners(); 
+    }
+
+    @Override
+    public void barrelNotifyUpdate() throws RemoteException {
+        // Um Barrel avisou que indexou algo. Vamos verificar e notificar o WebServer.
+        checkAndNotify(false); 
     }
 
     /**
@@ -164,6 +184,12 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             searchCache.put(cacheKey, new CachedResult(results));
             
             System.out.println(" Encontrados " + results.size() + " resultados em " + duration + "ms (Barrel " + barrelIdx + ")");
+
+            if (page == 0) {
+                // Executa numa thread à parte para não atrasar a resposta ao utilizador
+                new Thread(() -> checkAndNotify(true)).start();
+            }
+
             return results;
             
         } catch (RemoteException e) {
@@ -176,6 +202,142 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             }
             throw e;
         }
+    }
+
+    // Em Gateway.java
+
+    /**
+     * Verifica mudanças e notifica os listeners.
+     */
+    private synchronized void checkAndNotify(boolean checkRanking) {
+        boolean changed = false;
+
+        try {
+            // 1. Verificar Top 10
+            if (checkRanking) {
+                // Usa o TEU método getTop10() que retorna List<Search>
+                List<Search> currentTopObj = getTop10(); 
+                
+                // Converter para List<String> para comparar com a cache lastTop10 (que assumo ser List<String>)
+                List<String> currentTopStrings = new ArrayList<>();
+                for (Search s : currentTopObj) {
+                    currentTopStrings.add(s.getSearch() + " (" + s.getAccesses() + ")");
+                }
+
+                // Compara
+                if (!currentTopStrings.equals(cachedTop10Strings)) { // Usa a variável que já tinhas: cachedTop10Strings
+                    cachedTop10Strings = currentTopStrings;
+                    changed = true;
+                }
+            }
+
+            // 2. Verificar Estado dos Barrels (Assinatura)
+            // Lógica manual em vez de chamar "gerarAssinaturaBarrels()"
+            StringBuilder sb = new StringBuilder();
+            List<Stats> currentStats = getStatsObjects(); // Usa o TEU método getStats()
+            for (Stats s : currentStats) {
+                if (!"gateway".equals(s.getServerName())) {
+                    sb.append(s.getServerName())
+                      .append(s.getIndexedUrls())
+                      .append(s.getIndexedWords());
+                }
+            }
+            String currentSig = sb.toString();
+
+            if (!currentSig.equals(lastBarrelState)) {
+                lastBarrelState = currentSig;
+                changed = true;
+            }
+
+            // 3. Notificar se houve mudanças
+            if (changed) {
+                notifyListeners();
+            }
+
+        } catch (Exception e) {
+            System.err.println("Erro no checkAndNotify: " + e.getMessage());
+        }
+    }
+
+    private void notifyListeners() {
+        try {
+            // Prepara o mapa de dados
+            Map<String, Object> statsMap = new HashMap<>();
+            
+            // Põe as Top Queries (Strings)
+            statsMap.put("topQueries", cachedTop10Strings); 
+            
+            // Põe os dados dos Barrels
+            // Filtra o gateway fora, queremos só barrels ativos
+            List<Stats> allStats = getStatsObjects();
+            List<Stats> activeBarrels = new ArrayList<>();
+            int totalBarrels = 0;
+            int totalDownloaders = 0; 
+            
+            // Tenta obter tamanho da Queue se possível
+            try { statsMap.put("queueSize", getQueueSize()); } catch(Exception e) { statsMap.put("queueSize", 0); }
+            
+            // Parsing rápido para preencher o JSON igual ao que o JS espera
+            for (Stats s : allStats) {
+                if (!s.getServerName().equals("gateway")) {
+                    activeBarrels.add(s);
+                    totalBarrels++;
+                }
+            }
+            
+            statsMap.put("activeBarrels", activeBarrels); // Envia lista completa de stats
+            statsMap.put("barrelsActive", totalBarrels);
+            statsMap.put("downloadersActive", getActiveDownloaders()); // Se tiveres este método
+
+            // Envia para todos os listeners
+            for (StatsListener listener : listeners) {
+                try {
+                    listener.onStatsUpdated(statsMap);
+                } catch (RemoteException e) {
+                    listeners.remove(listener);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<Search> getTop10() {
+        // ... a tua lógica de obter o top 10 ...
+        // Se ainda não tens lógica, retorna uma lista vazia para compilar:
+        return new ArrayList<>(); 
+    }
+
+    public List<Stats> getStatsObjects() {
+        List<Stats> list = new ArrayList<>();
+        
+        // Adiciona Gateway (Placeholder)
+        list.add(new Stats("gateway", 0, 0));
+
+        // Percorre barrels e extrai dados das Strings
+        for (int i = 0; i < barrels.size(); i++) {
+            try {
+                String s = barrels.get(i).getStats(); // "[Barrel0] P:10 | T:20 | B:5"
+                
+                int urls = 0;
+                int words = 0;
+                
+                // Parsing simples
+                try {
+                    String[] parts = s.split("\\|");
+                    for (String p : parts) {
+                        p = p.trim();
+                        if (p.startsWith("P:")) urls = Integer.parseInt(p.substring(2));
+                        if (p.startsWith("T:")) words = Integer.parseInt(p.substring(2));
+                    }
+                } catch (Exception parseEx) {}
+
+                list.add(new Stats("barrel" + i, urls, words));
+            } catch (Exception e) {
+                // Barrel offline
+            }
+        }
+        return list;
     }
     
     /**
@@ -414,6 +576,37 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+    public static class Stats implements java.io.Serializable {
+        private String serverName;
+        private int indexedUrls;
+        private int indexedWords;
+        // Adiciona getters/setters necessários ou usa public
+        public Stats(String name, int urls, int words) {
+            this.serverName = name; this.indexedUrls = urls; this.indexedWords = words;
+        }
+        public String getServerName() { return serverName; }
+        public int getIndexedUrls() { return indexedUrls; }
+        public int getIndexedWords() { return indexedWords; }
+    }
+
+    // Classe auxiliar para Search (para resolver o conflito com o Spring)
+    public static class Search implements java.io.Serializable, Comparable<Search> {
+        private String term;
+        private int count;
+        
+        public Search(String term, int count) {
+            this.term = term;
+            this.count = count;
+        }
+        
+        public String getSearch() { return term; }
+        public int getAccesses() { return count; }
+
+        @Override
+        public int compareTo(Search o) {
+            return Integer.compare(this.count, o.count);
         }
     }
 }

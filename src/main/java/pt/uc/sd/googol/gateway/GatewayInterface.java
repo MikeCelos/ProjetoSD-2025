@@ -78,4 +78,10 @@ public interface GatewayInterface extends Remote {
      * @throws RemoteException Se ocorrer um erro na comunicação RMI.
      */
     public int getActiveDownloaders() throws RemoteException;
+
+    // WebServer chama isto para começar a receber atualizações
+    void registerListener(StatsListener listener) throws RemoteException;
+
+    // Barrels chamam isto para avisar que indexaram algo novo
+    void barrelNotifyUpdate() throws RemoteException;
 }
