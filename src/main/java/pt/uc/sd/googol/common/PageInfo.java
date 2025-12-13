@@ -15,7 +15,6 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
-
 public class PageInfo implements Serializable {
     
     /** Versão de serialização para garantir compatibilidade entre versões da classe. */

@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import pt.uc.sd.googol.barrel.BarrelInterface;
 import pt.uc.sd.googol.multicast.ReliableMulticast;
 import pt.uc.sd.googol.queue.URLQueueInterface;
+
 public class Downloader {
     
     private final int numWorkers;
@@ -74,7 +75,7 @@ public class Downloader {
             this.urlQueue.registerDownloader();
             
             // Teste: Ping para ver se está vivo
-            System.out.println(" ✓ " + this.urlQueue.ping());
+            System.out.println( this.urlQueue.ping());
 
             // Shutdown Hook: Garante que o downloader se "desregistra" se for fechado (Ctrl+C)
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {

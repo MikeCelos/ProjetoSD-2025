@@ -16,7 +16,6 @@ import java.util.Set;
 
 import pt.uc.sd.googol.common.PageInfo;
 
-
 public class SyncData implements Serializable {
     
     /** Mapa de URLs para objetos PageInfo com metadados (título, citação, etc.). */

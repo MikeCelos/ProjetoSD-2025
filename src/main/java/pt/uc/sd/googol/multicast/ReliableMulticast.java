@@ -92,6 +92,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import pt.uc.sd.googol.barrel.BarrelInterface;
 import pt.uc.sd.googol.common.PageInfo;
 
+
 public class ReliableMulticast {
     
     /** Lista thread-safe de interfaces RMI para os Barrels conhecidos. */

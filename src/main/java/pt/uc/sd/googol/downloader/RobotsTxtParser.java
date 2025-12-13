@@ -10,15 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.jsoup.Jsoup;
 
-/**
- * Analisador de ficheiros robots.txt (Robot Exclusion Standard).
- * <p>
- * Esta classe é responsável por verificar se o Crawler tem permissão para aceder a determinados URLs
- * e respeitar as regras de "politeness" (atrasos de rastreio) definidas pelos administradores dos sites.
- * Mantém uma cache em memória das regras por domínio para evitar downloads repetidos do mesmo robots.txt.
- *
- * @author André Ramos 2023227306
- */
 public class RobotsTxtParser {
     
     /** Cache de regras (RobotRules) indexada pelo domínio (ex: http://www.uc.pt). */

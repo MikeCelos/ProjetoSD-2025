@@ -54,7 +54,6 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
 
-
 public interface GatewayInterface extends Remote {
 
     /**
@@ -119,4 +118,16 @@ public interface GatewayInterface extends Remote {
      * @throws RemoteException Se ocorrer um erro na comunicação RMI.
      */
     public int getActiveDownloaders() throws RemoteException;
+
+    // WebServer chama isto para começar a receber atualizações
+    void registerListener(StatsListener listener) throws RemoteException;
+
+    // Barrels chamam isto para avisar que indexaram algo novo
+    void barrelNotifyUpdate() throws RemoteException;
+
+    // O Barrel chama isto quando arranca
+    void registerBarrel(pt.uc.sd.googol.barrel.BarrelInterface barrel) throws java.rmi.RemoteException;
+    
+    // O Barrel chama isto quando encerra graciosamente
+    void unregisterBarrel(pt.uc.sd.googol.barrel.BarrelInterface barrel) throws java.rmi.RemoteException;
 }

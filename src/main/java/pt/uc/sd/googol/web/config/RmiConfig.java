@@ -19,7 +19,6 @@ import org.springframework.context.annotation.Configuration;
 
 import pt.uc.sd.googol.gateway.GatewayInterface;
 
-
 @Configuration
 public class RmiConfig {
 

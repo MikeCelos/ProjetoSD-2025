@@ -79,15 +79,18 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import pt.uc.sd.googol.barrel.BarrelInterface;
 import pt.uc.sd.googol.queue.URLQueueInterface;
-
 
 public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     
@@ -111,6 +114,12 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     
     /** Registo de tempos de resposta por Barrel para cálculo de latência média. */
     private final Map<Integer, List<Long>> responseTimes;
+
+    private List<StatsListener> listeners = new CopyOnWriteArrayList<>();
+
+    private List<String> lastTop10 = new ArrayList<>();
+    private String lastBarrelState = ""; // Assinatura do estado dos barrels
+    private java.util.List<String> cachedTop10Strings = new java.util.ArrayList<>();
     
     /**
      * Construtor do Gateway.
@@ -134,6 +143,44 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
         
         System.out.println(" Gateway inicializado com " + barrels.size() + " barrels");
+    }
+
+    // Adiciona estes métodos na classe Gateway
+
+    @Override
+    public void registerBarrel(BarrelInterface barrel) throws RemoteException {
+        // Evitar duplicados
+        if (!barrels.contains(barrel)) {
+            barrels.add(barrel);
+            System.out.println(" [Gateway] Novo Barrel registado! Total: " + barrels.size());
+            
+            // AQUI ESTÁ A MAGIA: Avisar o frontend imediatamente
+            notifyListeners();
+        }
+    }
+
+    @Override
+    public void unregisterBarrel(BarrelInterface barrel) throws RemoteException {
+        if (barrels.remove(barrel)) {
+            System.out.println(" [Gateway] Barrel saiu. Restantes: " + barrels.size());
+            
+            // AVISAR O FRONTEND IMEDIATAMENTE
+            notifyListeners();
+        }
+    }
+
+    @Override
+    public void registerListener(StatsListener listener) throws RemoteException {
+        listeners.add(listener);
+        System.out.println("[Gateway] Novo listener registado.");
+        // Opcional: Enviar estado atual imediatamente para não ficar vazio
+        notifyListeners(); 
+    }
+
+    @Override
+    public void barrelNotifyUpdate() throws RemoteException {
+        // Um Barrel avisou que indexou algo. Vamos verificar e notificar o WebServer.
+        checkAndNotify(false, true);
     }
 
     /**
@@ -226,6 +273,10 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             searchCache.put(cacheKey, new CachedResult(results));
             
             System.out.println(" Encontrados " + results.size() + " resultados em " + duration + "ms (Barrel " + barrelIdx + ")");
+
+            // Executa numa thread à parte para não atrasar a resposta ao utilizador
+            new Thread(() -> checkAndNotify(true)).start();
+
             return results;
             
         } catch (RemoteException e) {
@@ -238,6 +289,214 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             }
             throw e;
         }
+    }
+
+    private synchronized void checkAndNotify(boolean checkRanking) {
+        checkAndNotify(checkRanking, false); // Chama versão com força = false
+    }
+
+    private synchronized void checkAndNotify(boolean checkRanking, boolean force) {
+        System.out.println("[DEBUG] checkAndNotify chamado. checkRanking=" + checkRanking + " force=" + force);
+        boolean changed = force; // ← Se force=true, sempre notifica
+
+        try {
+            // 1. Verificar Top 10
+            if (checkRanking) {
+                List<Search> currentTopObj = getTop10(); 
+                List<String> currentTopStrings = new ArrayList<>();
+                for (Search s : currentTopObj) {
+                    currentTopStrings.add(s.getSearch() + " (" + s.getAccesses() + ")");
+                }
+
+                if (!currentTopStrings.equals(cachedTop10Strings)) {
+                    cachedTop10Strings = currentTopStrings;
+                    changed = true;
+                }
+            }
+
+            // 2. Verificar Estado dos Barrels (só se não forçar)
+            if (!force) {
+                StringBuilder sb = new StringBuilder();
+                List<Stats> currentStats = getStatsObjects(); 
+                
+                for (Stats s : currentStats) {
+                    if (!"gateway".equals(s.getServerName())) {
+                        sb.append(s.getServerName())
+                        .append(s.getIndexedUrls())
+                        .append(s.getIndexedWords())
+                        .append(s.getAvgResponseTime()); 
+                    }
+                }
+                String currentSig = sb.toString();
+
+                if (!currentSig.equals(lastBarrelState)) {
+                    lastBarrelState = currentSig;
+                    changed = true;
+                }
+            }
+
+            // 3. Notificar se houve mudanças
+            System.out.println("[DEBUG] changed=" + changed + " | Top10Size=" + cachedTop10Strings.size());
+
+            if (changed) {
+                notifyListeners();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void notifyListeners() {
+        try {
+
+            System.out.println(" [Gateway] A notificar " + listeners.size() + " ouvintes...");
+
+            Map<String, Object> statsMap = new HashMap<>();
+            
+            // 1. Top Queries
+            statsMap.put("topQueries", cachedTop10Strings);
+            
+            // 2. Queue Size
+            try { statsMap.put("queueSize", getQueueSize()); } catch(Exception e) { statsMap.put("queueSize", 0); }
+            try { statsMap.put("downloadersActive", getActiveDownloaders()); } catch(Exception e) { statsMap.put("downloadersActive", 0); }
+
+            // 3. Obter Stats
+            List<Stats> allStats = getStatsObjects();
+            
+            // Listas para o Frontend
+            List<Map<String, Object>> latenciesList = new ArrayList<>();
+            List<Map<String, Object>> storageList = new ArrayList<>();
+            
+            int totalBarrels = 0;
+
+            for (Stats s : allStats) {
+                // Ignorar o gateway
+                if ("gateway".equals(s.getServerName())) continue;
+
+                totalBarrels++;
+                
+                // Extrair ID ("barrel0" -> "0")
+                String id = s.getServerName().replace("barrel", "");
+
+                // A. Preparar Latência (SEMPRE adiciona, mesmo sem dados)
+                Map<String, Object> lat = new HashMap<>();
+                lat.put("barrelId", id);
+                
+                // Se avgResponseTime for -1, significa "sem dados ainda"
+                if (s.getAvgResponseTime() < 0) {
+                    lat.put("avgMs", "N/A"); // ← MUDANÇA: mostra "N/A" em vez de "-1.00"
+                    lat.put("status", "active"); // ← NOVO: indica que está ativo mas sem medições
+                } else {
+                    lat.put("avgMs", String.format(Locale.US, "%.2f", s.getAvgResponseTime()));
+                    lat.put("status", "measured"); // ← NOVO: indica que tem medições
+                }
+                latenciesList.add(lat);
+
+                // B. Preparar Memória (Storage) - SEMPRE adiciona
+                Map<String, Object> store = new HashMap<>();
+                store.put("barrelId", id);
+                store.put("count", s.getIndexedUrls());
+                storageList.add(store);
+            }
+
+            // Enviar com os nomes EXATOS que o JavaScript procura
+            statsMap.put("barrelLatencies", latenciesList);
+            statsMap.put("barrelStorage", storageList);
+            statsMap.put("barrelsActive", totalBarrels);
+
+            System.out.println("[DEBUG] Enviando stats: " + totalBarrels + " barrels, " + 
+                            latenciesList.size() + " latências, " + 
+                            storageList.size() + " storages");
+
+            // Enviar para os ouvintes
+            for (StatsListener listener : listeners) {
+                try {
+                    listener.onStatsUpdated(statsMap);
+                } catch (RemoteException e) {
+                    listeners.remove(listener);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<Search> getTop10() {
+        // Pega no mapa de contagens (searchCounts), ordena e extrai os 10 primeiros
+        return searchCounts.entrySet().stream()
+            .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // Ordem Decrescente (Maior -> Menor)
+            .limit(10) // Apenas os 10 primeiros
+            .map(entry -> new Search(entry.getKey(), entry.getValue())) // Converte para objeto Search
+            .collect(Collectors.toList());
+    }
+
+    public List<Stats> getStatsObjects() {
+        List<Stats> list = new ArrayList<>();
+        
+        // Adiciona o Gateway
+        Stats gwStats = new Stats();
+        gwStats.setServerName("gateway");
+        list.add(gwStats);
+    
+        // Percorre TODOS os barrels
+        for (int i = 0; i < barrels.size(); i++) {
+            // Nome provisório caso o RMI falhe
+            String name = "barrel" + i;
+            int urls = 0;
+            int words = 0;
+            double avgTime = 0.0;
+    
+            try {
+                // Tenta obter dados via RMI
+                String s = barrels.get(i).getStats(); // Ex: "[Barrel0] P:150 | T:300"
+                
+                if (s != null) {
+                    // --- CORREÇÃO AQUI (USAR REGEX) ---
+                    
+                    // 1. Extrair Nome Real [BarrelX]
+                    Matcher mName = Pattern.compile("\\[(Barrel\\d+)\\]").matcher(s);
+                    if (mName.find()) {
+                        name = mName.group(1).toLowerCase(); // "barrel0"
+                    }
+
+                    // 2. Extrair URLs (P:...)
+                    Matcher mUrls = Pattern.compile("P:(\\d+)").matcher(s);
+                    if (mUrls.find()) {
+                        urls = Integer.parseInt(mUrls.group(1));
+                    }
+
+                    // 3. Extrair Palavras (T:...)
+                    Matcher mWords = Pattern.compile("T:(\\d+)").matcher(s);
+                    if (mWords.find()) {
+                        words = Integer.parseInt(mWords.group(1));
+                    }
+                    // ----------------------------------
+                }
+                
+                // Calcular Média de Tempo (em ms)
+                List<Long> times = responseTimes.get(i);
+                if (times != null && !times.isEmpty()) {
+                    double totalMs = 0;
+                    for (Long t : times) totalMs += t;
+                    avgTime = totalMs / times.size();
+                }
+    
+            } catch (Exception e) {
+                System.err.println("Barrel " + i + " falhou ou está offline.");
+            }
+    
+            // Adiciona à lista (mesmo que tenha falhado, vai com zeros)
+            Stats barrelStats = new Stats();
+            barrelStats.setServerName(name);
+            barrelStats.setIndexedUrls(urls);
+            barrelStats.setIndexedWords(words);
+            barrelStats.setServerUptime(0L);
+            barrelStats.setAvgResponseTime(avgTime);
+            
+            list.add(barrelStats);
+        }
+        return list;
     }
     
     /**
@@ -344,7 +603,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
                     barrels.set(i, newBarrelRef);
                     
                     stats.append(newBarrelRef.getStats()).append(" (Reconectado)\n");
-                    System.out.println(" [Gateway] ✓ Reconexão bem-sucedida ao Barrel " + i);
+                    System.out.println(" [Gateway] Reconexão bem-sucedida ao Barrel " + i);
                     
                 } catch (Exception ex) {
                     stats.append("Barrel ").append(i).append(": OFFLINE (Incontactável)\n");
@@ -452,9 +711,9 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             try {
                 Registry queueRegistry = LocateRegistry.getRegistry("localhost", queuePort);
                 queue = (URLQueueInterface) queueRegistry.lookup("queue");
-                System.out.println("✓ Conectado à URL Queue");
+                System.out.println("Conectado à URL Queue");
             } catch (Exception e) {
-                System.err.println("⚠ AVISO: Não foi possível conectar à Queue. Indexação manual indisponível.");
+                System.err.println("AVISO: Não foi possível conectar à Queue. Indexação manual indisponível.");
             }
 
             // 3. Iniciar Gateway
