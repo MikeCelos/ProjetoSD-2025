@@ -60,22 +60,6 @@ public class WebController {
         this.gateway = gateway;
     }
 
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
-
-    /**
-     * Quando o JavaScript envia para "/app/request-stats"
-     * Respondemos imediatamente para "/topic/stats"
-     */
-    @MessageMapping("/request-stats")
-    public void sendInitialStats() {
-        
-        Map<String, Object> lastStats = StatsListenerImpl.getLastStats();
-        
-        // Envia diretamente para o tópico (todos os conectados recebem)
-        messagingTemplate.convertAndSend("/topic/stats", lastStats);
-    }
-
     /**
      * Renderiza a página inicial da aplicação.
      *

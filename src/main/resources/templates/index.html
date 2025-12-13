@@ -644,9 +644,11 @@
                     <li>Downloaders ativos: <span id="stats-downloaders" class="stat-number">-</span></li>
                     <li>Barrels ativos: <span id="stats-barrels" class="stat-number">-</span></li>
                     <li>URLs na fila: <span id="stats-queue-size" class="stat-number">-</span></li>
-                    
-                    <div id="stats-memory-container" style="margin-top: 4px;"></div>
                 </ul>
+
+                <!-- Lista separada para storage (fora da UL acima) -->
+                <ul class="side-list" id="stats-memory-container" style="margin-top: 8px;"></ul>
+                
                 <div class="side-footer">
                     Atualizado em tempo real via WebSocket.
                 </div>
@@ -674,61 +676,174 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 
 <script>
-    (function () {
-        let socket = new SockJS('/ws-stats');
-        let stompClient = Stomp.over(socket);
-        stompClient.debug = null;
+(function () {
+    // ============================================
+    // PARTE 1: FUNÇÕES DE CACHE (localStorage)
+    // ============================================
+    
+    function saveStatsToCache(data) {
+        try {
+            localStorage.setItem('googol_stats_cache', JSON.stringify(data));
+            localStorage.setItem('googol_stats_timestamp', Date.now().toString());
+            console.log('[CACHE] Dados salvos no localStorage');
+        } catch (e) {
+            console.warn('[CACHE] Erro ao salvar:', e);
+        }
+    }
+    
+    function loadStatsFromCache() {
+        try {
+            const cached = localStorage.getItem('googol_stats_cache');
+            const timestamp = localStorage.getItem('googol_stats_timestamp');
+            
+            if (!cached) {
+                console.log('[CACHE] Nenhum cache encontrado');
+                return null;
+            }
+            
+            const age = Date.now() - parseInt(timestamp || '0');
+            const maxAge = 5 * 60 * 1000; // 5 minutos
+            
+            if (age > maxAge) {
+                console.log('[CACHE] Cache expirado (idade: ' + Math.round(age/1000) + 's)');
+                return null;
+            }
+            
+            console.log('[CACHE] Cache carregado (idade: ' + Math.round(age/1000) + 's)');
+            return JSON.parse(cached);
+        } catch (e) {
+            console.warn('[CACHE] Erro ao carregar cache:', e);
+            return null;
+        }
+    }
+    
+    // ============================================
+    // PARTE 2: FUNÇÃO DE ATUALIZAÇÃO DA UI
+    // ============================================
+    
+    function updateUI(data) {
+        console.log('[UI] Atualizando interface com dados:', data);
+        
+        // 1. Estatísticas básicas
+        document.getElementById('stats-downloaders').textContent = 
+            data.downloadersActive !== undefined ? data.downloadersActive : '-';
+        
+        document.getElementById('stats-barrels').textContent = 
+            data.barrelsActive !== undefined ? data.barrelsActive : '-';
+        
+        document.getElementById('stats-queue-size').textContent = 
+            data.queueSize !== undefined ? data.queueSize : '-';
 
-        stompClient.connect({}, function () {
-            stompClient.subscribe('/topic/stats', function (message) {
-                const data = JSON.parse(message.body);
-                console.log('[WS] raw message.body:', message.body);
-                console.log('[WS] parsed data:', data);
-                console.log('[WS] barrelStorage count=', data.barrelStorage.length);
-
-                // --- ATUALIZAÇÕES EXISTENTES ---
-                document.getElementById('stats-downloaders').textContent = data.downloadersActive;
-                document.getElementById('stats-barrels').textContent = data.barrelsActive;
-                document.getElementById('stats-queue-size').textContent = data.queueSize;
-
-                const topQueriesElem = document.getElementById('stats-top-queries');
-                topQueriesElem.innerHTML = '';
-                (data.topQueries || []).forEach(function (q) {
-                    const li = document.createElement('li');
-                    li.textContent = q;
-                    topQueriesElem.appendChild(li);
-                });
-
-                const latenciesElem = document.getElementById('stats-latencies');
-                    latenciesElem.innerHTML = '';
-                    (data.barrelLatencies || []).forEach(function (b) {
-                        const li = document.createElement('li');
-                        
-                        // Verifica se é "N/A" ou um número
-                        if (b.avgMs === "N/A" || b.avgMs === "-1.00") {
-                            li.innerHTML = `Barrel ${b.barrelId}: <span style="color: #22c55e;">●</span> Ativo (sem medições)`;
-                        } else {
-                            li.innerHTML = `Barrel ${b.barrelId}: <span style="color: #22c55e;">●</span> ${b.avgMs} ms`;
-                        }
-                        
-                        latenciesElem.appendChild(li);
-                    });
-
-                // --- NOVO CÓDIGO (ADICIONA ISTO) ---
-                const memContainer = document.getElementById('stats-memory-container');
-                if (memContainer && data.barrelStorage && data.barrelStorage.length > 0) {
-                    memContainer.innerHTML = ''; 
-                    data.barrelStorage.forEach(function (b) {
-                        const li = document.createElement('li');
-                        // Cria um elemento <li> igual aos de cima
-                        li.innerHTML = `Páginas (B${b.barrelId}): <span class="stat-number">${b.count}</span>`;
-                        memContainer.appendChild(li);
-                    });
-                }
-                // ------------------------------------
+        // 2. Top 10 Queries
+        const topQueriesElem = document.getElementById('stats-top-queries');
+        topQueriesElem.innerHTML = '';
+        
+        if (data.topQueries && data.topQueries.length > 0) {
+            data.topQueries.forEach(function (q) {
+                const li = document.createElement('li');
+                li.textContent = q;
+                topQueriesElem.appendChild(li);
             });
+        } else {
+            const li = document.createElement('li');
+            li.textContent = 'Ainda sem pesquisas';
+            li.style.color = 'var(--text-muted)';
+            topQueriesElem.appendChild(li);
+        }
+
+        // 3. Latências dos Barrels
+        const latenciesElem = document.getElementById('stats-latencies');
+        latenciesElem.innerHTML = '';
+        
+        if (data.barrelLatencies && data.barrelLatencies.length > 0) {
+            data.barrelLatencies.forEach(function (b) {
+                const li = document.createElement('li');
+                
+                if (b.avgMs === "N/A" || b.avgMs === "-1.00") {
+                    li.innerHTML = `Barrel ${b.barrelId}: <span style="color: #22c55e;">●</span> Ativo (sem medições)`;
+                } else {
+                    li.innerHTML = `Barrel ${b.barrelId}: <span style="color: #22c55e;">●</span> ${b.avgMs} ms`;
+                }
+                
+                latenciesElem.appendChild(li);
+            });
+        } else {
+            const li = document.createElement('li');
+            li.textContent = 'Nenhum barrel ativo';
+            li.style.color = 'var(--text-muted)';
+            latenciesElem.appendChild(li);
+        }
+
+        // 4. Memória/Storage dos Barrels
+        const memContainer = document.getElementById('stats-memory-container');
+        if (memContainer && data.barrelStorage && data.barrelStorage.length > 0) {
+            memContainer.innerHTML = '';
+            data.barrelStorage.forEach(function (b) {
+                const li = document.createElement('li');
+                li.innerHTML = `Páginas (B${b.barrelId}): <span class="stat-number">${b.count}</span>`;
+                memContainer.appendChild(li);
+            });
+        }
+    }
+    
+    // ============================================
+    // PARTE 3: CARREGAR CACHE AO INICIAR
+    // ============================================
+    
+    console.log('[INIT] Carregando dados em cache...');
+    const cachedData = loadStatsFromCache();
+    if (cachedData) {
+        console.log('[INIT] Aplicando cache na UI');
+        updateUI(cachedData);
+    } else {
+        console.log('[INIT] Sem cache disponível - aguardando WebSocket');
+    }
+    
+    // ============================================
+    // PARTE 4: CONEXÃO WEBSOCKET
+    // ============================================
+    
+    console.log('[WS] Iniciando conexão WebSocket...');
+    let socket = new SockJS('/ws-stats');
+    let stompClient = Stomp.over(socket);
+    stompClient.debug = null; // Desativa logs verbosos do STOMP
+    
+    stompClient.connect({}, function (frame) {
+        console.log('[WS] ✓ Conectado ao servidor!');
+        
+        // A. Subscrever ao tópico de estatísticas
+        stompClient.subscribe('/topic/stats', function (message) {
+            console.log('╔════════════════════════════════════════════');
+            console.log('║ [WS] Mensagem recebida!');
+            console.log('║ Raw body:', message.body);
+            
+            try {
+                const data = JSON.parse(message.body);
+                console.log('║ Parsed data:', data);
+                console.log('║ Top10 size:', (data.topQueries || []).length);
+                console.log('║ Barrels:', data.barrelsActive);
+                console.log('╚════════════════════════════════════════════');
+                
+                // Atualizar UI
+                updateUI(data);
+                
+                // Salvar no cache
+                saveStatsToCache(data);
+                
+            } catch (e) {
+                console.error('[WS] Erro ao processar mensagem:', e);
+            }
         });
-    })();
+        
+        // B. PEDIR DADOS INICIAIS IMEDIATAMENTE
+        console.log('[WS] Pedindo dados iniciais ao servidor...');
+        stompClient.send("/app/request-stats", {}, JSON.stringify({}));
+        
+    }, function (error) {
+        console.error('[WS] ✗ Erro na conexão:', error);
+    });
+    
+})();
 </script>
 
 </body>
