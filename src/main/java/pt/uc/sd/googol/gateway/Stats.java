@@ -1,3 +1,50 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 1
+ *  Componente: Gateway
+ *  Classe: Stats
+ * ===============================================================
+ *
+ * <p>
+ * A classe {@code Stats} representa um conjunto de <b>estatísticas
+ * de funcionamento</b> de um componente do sistema (por exemplo,
+ * Gateway ou Barrel).
+ * </p>
+ *
+ * <p>
+ * É utilizada para transportar métricas de monitorização entre
+ * componentes distribuídos, permitindo ao Gateway recolher e
+ * apresentar informação sobre o estado do sistema.
+ * </p>
+ *
+ * <p>
+ * As estatísticas atualmente suportadas incluem:
+ * <ul>
+ *   <li>Nome do servidor;</li>
+ *   <li>Tempo de funcionamento (uptime);</li>
+ *   <li>Tempo médio de resposta;</li>
+ *   <li>Número de URLs indexados;</li>
+ *   <li>Número de palavras indexadas.</li>
+ * </ul>
+ * </p>
+ *
+ * <p>
+ * Esta classe:
+ * <ul>
+ *   <li>Implementa {@link Serializable} para permitir transmissão
+ *       de instâncias via RMI;</li>
+ *   <li>Funciona como um <i>DTO</i> (Data Transfer Object), não
+ *       contendo lógica de negócio;</li>
+ *   <li>É usada para fins de monitorização, diagnóstico e
+ *       apresentação de estatísticas ao utilizador.</li>
+ * </ul>
+ * </p>
+ *
+ * @author
+ *  Elemento 1: Francisco Vasconcelos e Sá Pires da Silva
+ *  Elemento 2: André Ramos
+ */
+
 package pt.uc.sd.googol.gateway; 
 
 import java.io.Serializable;

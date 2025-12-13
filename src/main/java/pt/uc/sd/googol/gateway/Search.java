@@ -1,3 +1,37 @@
+/**
+ * ===============================================================
+ *  Projeto GOOGOL — Meta 1
+ *  Componente: Gateway
+ *  Classe: Search
+ * ===============================================================
+ *
+ * <p>
+ * A classe {@code Search} representa um termo de pesquisa e o respetivo
+ * número de acessos/pesquisas realizadas pelos utilizadores.
+ * </p>
+ *
+ * <p>
+ * É utilizada pelo {@code Gateway} para manter estatísticas de pesquisa,
+ * nomeadamente para calcular e apresentar o <b>Top 10 termos mais
+ * pesquisados</b>.
+ * </p>
+ *
+ * <p>
+ * Esta classe:
+ * <ul>
+ *   <li>Implementa {@link Serializable} para poder ser transmitida
+ *       entre componentes distribuídos via RMI;</li>
+ *   <li>Implementa {@link Comparable} para permitir ordenação direta
+ *       por número de acessos (ordem decrescente);</li>
+ *   <li>É uma estrutura simples de dados (DTO) sem lógica de negócio.</li>
+ * </ul>
+ * </p>
+ *
+ * @author
+ * Elemento 1: André Ramos
+ * Elemento 2: Francisco Vasconcelos e Sá Pires da Silva
+ */
+
 package pt.uc.sd.googol.gateway; //
 
 import java.io.Serializable;
