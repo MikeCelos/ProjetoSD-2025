@@ -183,7 +183,7 @@
         /* Opcional: Garante que o form de pesquisa ocupa o espaço necessário */
         #search-form {
             flex-grow: 1; /* Ocupa o espaço disponível */
-            max-width: 70%; /* Impede que encoste demasiado ao botão da direita se a tela for pequena */
+            max-width: 70%; /* Impede que encoste demasiado ao botão da direita se o ecran for pequena */
         }
 
         .search-input-wrapper {
@@ -341,7 +341,7 @@
         }
 
         .result-meta a {
-            color: #60a5fa; /* Cor melhorada para contraste */
+            color: #60a5fa;
             text-decoration: none;
         }
 
@@ -646,9 +646,8 @@
                     <li>URLs na fila: <span id="stats-queue-size" class="stat-number">-</span></li>
                 </ul>
 
-                <!-- Lista separada para storage (fora da UL acima) -->
                 <ul class="side-list" id="stats-memory-container" style="margin-top: 8px;"></ul>
-                
+
                 <div class="side-footer">
                     Atualizado em tempo real via WebSocket.
                 </div>
@@ -809,20 +808,18 @@
     stompClient.debug = null; // Desativa logs verbosos do STOMP
     
     stompClient.connect({}, function (frame) {
-        console.log('[WS] ✓ Conectado ao servidor!');
+        console.log('[WS] Conectado ao servidor!');
         
         // A. Subscrever ao tópico de estatísticas
         stompClient.subscribe('/topic/stats', function (message) {
-            console.log('╔════════════════════════════════════════════');
-            console.log('║ [WS] Mensagem recebida!');
-            console.log('║ Raw body:', message.body);
+            console.log(' [WS] Mensagem recebida!');
+            console.log(' Raw body:', message.body);
             
             try {
                 const data = JSON.parse(message.body);
-                console.log('║ Parsed data:', data);
-                console.log('║ Top10 size:', (data.topQueries || []).length);
-                console.log('║ Barrels:', data.barrelsActive);
-                console.log('╚════════════════════════════════════════════');
+                console.log(' Parsed data:', data);
+                console.log(' Top10 size:', (data.topQueries || []).length);
+                console.log(' Barrels:', data.barrelsActive);
                 
                 // Atualizar UI
                 updateUI(data);
@@ -840,7 +837,7 @@
         stompClient.send("/app/request-stats", {}, JSON.stringify({}));
         
     }, function (error) {
-        console.error('[WS] ✗ Erro na conexão:', error);
+        console.error('[WS] Erro na conexão:', error);
     });
     
 })();

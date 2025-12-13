@@ -38,7 +38,14 @@ PASSO 2: INTERFACES DE UTILIZADOR
 
 mvn spring-boot:run
 
--> Aceder em: http://localhost:8080
+Nota sobre a Ligação Segura Para simular um ambiente de produção real,
+o projeto corre sobre HTTPS na porta 8443. Como estamos a usar um certificado
+auto-assinado para fins académicos, o browser irá apresentar um aviso de
+"Sítio Não Seguro" ou "A sua ligação não é privada". Deverá ignorar este
+aviso e forçar a entrada (Geralmente em: Avançadas -> Continuar para...)
+para que a comunicação WebSocket funcione corretamente.
+
+-> Aceder em: https://10.46.221.165:8443
 
 # Terminal 7 - Cliente CLI (Opcional - Meta 1)
 java -cp target/classes pt.uc.sd.googol.client.GoogolClient
