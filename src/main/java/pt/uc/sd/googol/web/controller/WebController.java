@@ -1,3 +1,21 @@
+/**
+ * Controlador principal da aplicação Web (Frontend Spring Boot).
+ * <p>
+ * Implementa o padrão MVC, processando os pedidos HTTP dos utilizadores e devolvendo
+ * as vistas HTML apropriadas (Thymeleaf).
+ * <p>
+ * Responsabilidades:
+ * <ul>
+ * <li>Gerir a página inicial e os resultados de pesquisa.</li>
+ * <li>Integrar com o Gateway RMI para obter dados do backend.</li>
+ * <li>Coordenar os serviços de Hacker News (REST) e Ollama (IA).</li>
+ * </ul>
+ *
+ * @author Elemento 1: André Ramos (2023227306)
+ * @author Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
+ * 
+ */
+
 package pt.uc.sd.googol.web.controller;
 
 import java.util.Collections;
@@ -16,21 +34,8 @@ import pt.uc.sd.googol.gateway.SearchResult;
 import pt.uc.sd.googol.web.service.HackerNewsService;
 import pt.uc.sd.googol.web.service.OllamaService;
 
-/**
- * Controlador principal da aplicação Web (Frontend Spring Boot).
- * <p>
- * Implementa o padrão MVC, processando os pedidos HTTP dos utilizadores e devolvendo
- * as vistas HTML apropriadas (Thymeleaf).
- * <p>
- * Responsabilidades:
- * <ul>
- * <li>Gerir a página inicial e os resultados de pesquisa.</li>
- * <li>Integrar com o Gateway RMI para obter dados do backend.</li>
- * <li>Coordenar os serviços de Hacker News (REST) e Ollama (IA).</li>
- * </ul>
- *
- * @author André Ramos 2023227306
- */
+
+
 @Controller
 public class WebController {
 

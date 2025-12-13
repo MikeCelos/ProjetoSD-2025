@@ -1,3 +1,13 @@
+/**
+ * Objeto de Transferência de Dados (DTO) usado para a sincronização entre Barrels.
+ * <p>
+ * Esta classe encapsula todo o estado interno de um Barrel (páginas, índice invertido e backlinks)
+ * num único objeto serializável, permitindo que seja enviado via RMI para um novo Barrel
+ * que se esteja a juntar à rede ou a recuperar de uma falha (State Transfer).
+ *
+ * @author Elemento 1:André Ramos 2023227306
+ */
+
 package pt.uc.sd.googol.barrel;
 
 import java.io.Serializable;
@@ -6,15 +16,7 @@ import java.util.Set;
 
 import pt.uc.sd.googol.common.PageInfo;
 
-/**
- * Objeto de Transferência de Dados (DTO) usado para a sincronização entre Barrels.
- * <p>
- * Esta classe encapsula todo o estado interno de um Barrel (páginas, índice invertido e backlinks)
- * num único objeto serializável, permitindo que seja enviado via RMI para um novo Barrel
- * que se esteja a juntar à rede ou a recuperar de uma falha (State Transfer).
- *
- * @author André Ramos 2023227306
- */
+
 public class SyncData implements Serializable {
     
     /** Mapa de URLs para objetos PageInfo com metadados (título, citação, etc.). */

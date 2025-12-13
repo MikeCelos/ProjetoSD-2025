@@ -39,17 +39,6 @@ package pt.uc.sd.googol.barrel;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
-/**
- * Classe principal responsável por lançar uma instância de um Storage Barrel.
- * <p>
- * Esta classe configura o ambiente RMI necessário, cria ou localiza o Registry
- * na porta 1099, e regista uma nova instância de {@link SimpleBarrel} para que
- * fique disponível para o Gateway e Downloaders.
- * Mantém o processo ativo indefinidamente.
- * </p>
- *
- * @author André Ramos 2023227306
- */
 public class BarrelLauncher {
 
     /**

@@ -54,16 +54,6 @@ import java.util.List;
 import pt.uc.sd.googol.common.PageInfo;
 import pt.uc.sd.googol.gateway.SearchResult;
 
-/**
- * Interface RMI que define as operações remotas disponíveis nos Storage Barrels.
- * <p>
- * Esta interface é o contrato para a comunicação entre os componentes do sistema
- * (Downloaders, Gateway e outros Barrels) e a camada de armazenamento.
- * Permite a indexação de documentos, pesquisa, consulta de estatísticas e
- * sincronização de estado para tolerância a falhas.
- *
- * @author André Ramos 2023227306
- */
 public interface BarrelInterface extends Remote {
 
     /**

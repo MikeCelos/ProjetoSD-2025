@@ -1,11 +1,3 @@
-package pt.uc.sd.googol.web.config;
-
-import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-
 /**
  * Classe de configuração para a comunicação em tempo real via WebSockets.
  * <p>
@@ -18,8 +10,18 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  * <li>O <b>Endpoint</b> de conexão onde o JavaScript do frontend se liga (via SockJS).</li>
  * </ul>
  *
- * @author André Ramos 2023227306
+ * @author Elemento 1: André Ramos (2023227306)
  */
+
+package pt.uc.sd.googol.web.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
+import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+
+
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {

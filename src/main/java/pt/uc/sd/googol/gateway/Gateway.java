@@ -88,21 +88,7 @@ import java.util.stream.Collectors;
 import pt.uc.sd.googol.barrel.BarrelInterface;
 import pt.uc.sd.googol.queue.URLQueueInterface;
 
-/**
- * Ponto de entrada (Gateway) do sistema Googol.
- * <p>
- * Atua como intermediário entre os Clientes (CLI ou Web) e o backend distribuído (Barrels e Queue).
- * Responsabilidades principais:
- * <ul>
- * <li>Receber pedidos de pesquisa e encaminhá-los para um Barrel disponível (Load Balancing).</li>
- * <li>Manter uma cache de resultados para melhorar o desempenho.</li>
- * <li>Gerir a lista de Barrels ativos e tolerar falhas (reconexão automática).</li>
- * <li>Fornecer estatísticas agregadas do sistema.</li>
- * <li>Encaminhar novos URLs para a fila de indexação.</li>
- * </ul>
- *
- * @author André Ramos 2023227306
- */
+
 public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     
     /** Lista de Barrels conhecidos e ativos. */

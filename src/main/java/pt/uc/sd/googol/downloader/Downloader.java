@@ -35,16 +35,6 @@ import java.util.concurrent.TimeUnit;
 import pt.uc.sd.googol.barrel.BarrelInterface;
 import pt.uc.sd.googol.multicast.ReliableMulticast;
 import pt.uc.sd.googol.queue.URLQueueInterface;
-
-/**
- * Componente principal do Web Crawler (Downloader).
- * <p>
- * Responsável por gerir um conjunto de threads (workers) que descarregam e processam páginas Web.
- * Liga-se à {@link URLQueueInterface} remota para obter URLs e reportar a sua presença,
- * e utiliza o protocolo {@link ReliableMulticast} para enviar os dados processados para os Barrels.
- *
- * @author André Ramos 2023227306
- */
 public class Downloader {
     
     private final int numWorkers;

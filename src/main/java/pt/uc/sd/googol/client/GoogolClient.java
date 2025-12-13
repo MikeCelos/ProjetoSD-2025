@@ -72,15 +72,6 @@ import java.util.Scanner;
 import pt.uc.sd.googol.gateway.GatewayInterface;
 import pt.uc.sd.googol.gateway.SearchResult;
 
-/**
- * Cliente RMI para o sistema de motor de busca Googol.
- * <p>
- * Esta classe fornece uma interface de linha de comandos (CLI) para os utilizadores
- * interagirem com o sistema. Liga-se ao Gateway via RMI e permite realizar
- * pesquisas, consultar backlinks, ver estatísticas e submeter novos URLs para indexação.
- *
- * @author André Ramos 2023227306
- */
 public class GoogolClient {
     
     private final GatewayInterface gateway;

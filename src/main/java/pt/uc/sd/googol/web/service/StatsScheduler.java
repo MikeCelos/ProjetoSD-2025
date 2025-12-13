@@ -66,18 +66,6 @@ import org.springframework.stereotype.Service;
 
 import pt.uc.sd.googol.gateway.GatewayInterface;
 
-/**
- * Serviço de agendamento responsável por enviar estatísticas em tempo real para o Frontend.
- * <p>
- * Esta classe atua como uma ponte assíncrona entre o Backend RMI e o Frontend Web:
- * <ol>
- * <li>Periodicamente (a cada 3 segundos), consulta o estado do Gateway RMI.</li>
- * <li>Processa e formata os dados brutos (Strings) em objetos JSON estruturados.</li>
- * <li>Faz o "broadcast" desses dados para todos os clientes Web ligados via WebSocket (STOMP).</li>
- * </ol>
- *
- * @author André Ramos 2023227306
- */
 @Service
 @EnableScheduling
 public class StatsScheduler {

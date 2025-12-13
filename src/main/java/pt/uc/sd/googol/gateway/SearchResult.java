@@ -42,15 +42,6 @@ package pt.uc.sd.googol.gateway;
 
 import java.io.Serializable;
 
-/**
- * Objeto de Transferência de Dados (DTO) que representa um resultado de pesquisa.
- * <p>
- * Esta classe é utilizada para transportar a informação de uma página encontrada nos Barrels
- * para o Gateway e, posteriormente, para o Cliente (Seja ele a consola ou a interface Web).
- * Implementa {@link Serializable} para poder ser transmitida através de RMI.
- *
- * @author André Ramos 2023227306
- */
 public class SearchResult implements Serializable {
     
     /** Versão de serialização para garantir compatibilidade RMI. */

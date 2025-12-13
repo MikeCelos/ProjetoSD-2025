@@ -57,21 +57,6 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-/**
- * Serviço responsável pela integração com o modelo de Inteligência Artificial local (Ollama).
- * <p>
- * Esta classe permite gerar análises e resumos contextualizados sobre as pesquisas dos utilizadores,
- * comunicando via REST com uma instância local do Ollama.
- * <p>
- * Vantagens desta abordagem:
- * <ul>
- * <li><b>Privacidade:</b> Os dados não saem da máquina local.</li>
- * <li><b>Custo:</b> Não requer chaves de API pagas (como a OpenAI).</li>
- * <li><b>Conformidade:</b> Cumpre o requisito de "alternativa equivalente REST" do projeto.</li>
- * </ul>
- *
- * @author André Ramos 2023227306
- */
 @Service
 public class OllamaService {
 

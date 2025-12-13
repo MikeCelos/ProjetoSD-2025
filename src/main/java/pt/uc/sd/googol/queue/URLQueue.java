@@ -1,13 +1,3 @@
-package pt.uc.sd.googol.queue;
-
-import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Implementação da Fila de URLs (URL Queue).
  * <p>
@@ -20,8 +10,20 @@ import java.util.concurrent.atomic.AtomicInteger;
  * </ul>
  * A classe é Thread-Safe para suportar múltiplos Downloaders a pedir/inserir URLs simultaneamente.
  *
- * @author André Ramos 2023227306
+ * @author Elemento 1: André Ramos (2023227306)
+ * Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
  */
+
+package pt.uc.sd.googol.queue;
+
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class URLQueue extends UnicastRemoteObject implements URLQueueInterface {
 
     /** Estrutura de dados principal (Deque) para permitir inserção no fim (normal) e no início (prioridade). */

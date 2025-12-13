@@ -1,3 +1,18 @@
+/**
+ * Implementação do servidor de armazenamento (Storage Barrel).
+ * <p>
+ * Esta classe gere o índice invertido, o armazenamento de páginas e os backlinks.
+ * Implementa mecanismos de tolerância a falhas, incluindo:
+ * <ul>
+ * <li>Persistência de dados em disco (ficheiros .dat).</li>
+ * <li>Sincronização automática com outros Barrels no arranque (State Transfer).</li>
+ * <li>Thread de auto-save para salvaguarda periódica.</li>
+ * </ul>
+ *
+ * @author Elemento 1: André Ramos 2023227306
+ *        Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
+ */
+
 package pt.uc.sd.googol.barrel;
 
 import java.io.File;
@@ -23,19 +38,6 @@ import java.util.stream.Collectors;
 import pt.uc.sd.googol.common.PageInfo;
 import pt.uc.sd.googol.gateway.SearchResult;
 
-/**
- * Implementação do servidor de armazenamento (Storage Barrel).
- * <p>
- * Esta classe gere o índice invertido, o armazenamento de páginas e os backlinks.
- * Implementa mecanismos de tolerância a falhas, incluindo:
- * <ul>
- * <li>Persistência de dados em disco (ficheiros .dat).</li>
- * <li>Sincronização automática com outros Barrels no arranque (State Transfer).</li>
- * <li>Thread de auto-save para salvaguarda periódica.</li>
- * </ul>
- *
- * @author André Ramos 2023227306
- */
 public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface {
     
     private final int barrelId;

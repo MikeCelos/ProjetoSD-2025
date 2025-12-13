@@ -1,8 +1,3 @@
-package pt.uc.sd.googol.queue;
-
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-
 /**
  * Classe principal responsável por iniciar o servidor da Fila de URLs (QueueServer).
  * <p>
@@ -17,8 +12,15 @@ import java.rmi.registry.Registry;
  * O servidor exporta o objeto {@link URLQueue} via RMI na porta 1098 (distinta da porta dos Barrels
  * para evitar conflitos se correrem na mesma máquina).
  *
- * @author André Ramos 2023227306
+ * @author Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
  */
+
+package pt.uc.sd.googol.queue;
+
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+
 public class QueueServer {
     
     /**

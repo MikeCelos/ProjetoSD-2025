@@ -1,9 +1,3 @@
-package pt.uc.sd.googol.common;
-
-import java.io.Serializable;
-import java.util.List;
-import java.util.Set;
-
 /**
  * Classe que representa a informação extraída de uma página Web.
  * <p>
@@ -12,8 +6,16 @@ import java.util.Set;
  * via Multicast para ser armazenado e indexado.
  * Implementa {@link Serializable} para poder viajar através da rede (RMI).
  *
- * @author André Ramos 2023227306
+ * @author Elemento 1: André Ramos (2023227306)
  */
+
+package pt.uc.sd.googol.common;
+
+import java.io.Serializable;
+import java.util.List;
+import java.util.Set;
+
+
 public class PageInfo implements Serializable {
     
     /** Versão de serialização para garantir compatibilidade entre versões da classe. */

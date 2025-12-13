@@ -1,3 +1,14 @@
+/**
+ * Classe de configuração do Spring Boot responsável pela integração com o sistema RMI (Backend).
+ * <p>
+ * Esta classe define a criação do Bean {@link GatewayInterface}, permitindo que os controladores
+ * e serviços da aplicação Web comuniquem com o Gateway do motor de busca desenvolvido na Meta 1.
+ * Funciona como a "ponte" entre o Frontend (Spring Boot) e o Backend (Java RMI).
+ *
+ * @author Elemento 1: André Ramos (2023227306)
+ */
+
+
 package pt.uc.sd.googol.web.config;
 
 import java.rmi.registry.LocateRegistry;
@@ -8,15 +19,7 @@ import org.springframework.context.annotation.Configuration;
 
 import pt.uc.sd.googol.gateway.GatewayInterface;
 
-/**
- * Classe de configuração do Spring Boot responsável pela integração com o sistema RMI (Backend).
- * <p>
- * Esta classe define a criação do Bean {@link GatewayInterface}, permitindo que os controladores
- * e serviços da aplicação Web comuniquem com o Gateway do motor de busca desenvolvido na Meta 1.
- * Funciona como a "ponte" entre o Frontend (Spring Boot) e o Backend (Java RMI).
- *
- * @author André Ramos 2023227306
- */
+
 @Configuration
 public class RmiConfig {
 

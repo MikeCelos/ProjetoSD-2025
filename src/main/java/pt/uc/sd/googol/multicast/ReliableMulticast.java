@@ -92,20 +92,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import pt.uc.sd.googol.barrel.BarrelInterface;
 import pt.uc.sd.googol.common.PageInfo;
 
-/**
- * Implementação de um protocolo de Multicast Fiável sobre RMI.
- * <p>
- * Esta classe é responsável por enviar as páginas processadas pelos Downloaders para
- * todos os Barrels ativos no sistema. Garante a consistência e disponibilidade através de:
- * <ul>
- * <li><b>Descoberta Dinâmica:</b> Procura ativamente novos Barrels no Registry se a lista estiver vazia.</li>
- * <li><b>Tolerância a Falhas:</b> Se o envio para um Barrel falhar (ex: reinício do servidor),
- * tenta reconectar automaticamente e reenviar a mensagem.</li>
- * <li><b>Thread Safety:</b> Utiliza estruturas de dados concorrentes para suportar múltiplos workers.</li>
- * </ul>
- *
- * @author André Ramos 2023227306
- */
 public class ReliableMulticast {
     
     /** Lista thread-safe de interfaces RMI para os Barrels conhecidos. */

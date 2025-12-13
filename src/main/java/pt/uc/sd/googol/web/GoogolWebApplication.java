@@ -55,7 +55,9 @@
  *  </ul>
  *
  *  @Autor:
+ * 
  *   Elemento 1: André Ramos — 2023227306
+ *   Elemento 2: Francisco Vasconcelos e Sá Pires da Silva (2023220012)
  */
 
 package pt.uc.sd.googol.web;
@@ -63,20 +65,7 @@ package pt.uc.sd.googol.web;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-/**
- * Ponto de entrada principal da aplicação Web (Frontend) do sistema Googol.
- * <p>
- * Esta classe é responsável por inicializar o contexto do Spring Boot,
- * arrancar o servidor Web embutido (Tomcat) na porta 8080 e desencadear
- * a configuração automática e injeção de dependências de todos os componentes
- * (Controladores, Serviços, WebSocket e ligação RMI).
- * <p>
- * A anotação {@link SpringBootApplication} instrui o Spring a fazer o varrimento
- * de componentes (Component Scan) neste pacote e nos sub-pacotes, encontrando
- * automaticamente os Beans de configuração.
- *
- * @author André Ramos 2023227306
- */
+
 @SpringBootApplication
 public class GoogolWebApplication {
 

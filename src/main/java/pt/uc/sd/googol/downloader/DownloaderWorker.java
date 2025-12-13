@@ -17,7 +17,7 @@
  *
  * <p>Os workers funcionam continuamente até serem interrompidos ou o sistema ser encerrado.
  *
- * @author Elemento 1 André Ramos 2023227306
+ * @author Elemento 1: André Ramos (2023227306)
  * @version 1.0
  * @see Downloader
  * @see PageInfo
@@ -41,21 +41,6 @@ import pt.uc.sd.googol.common.PageInfo;
 import pt.uc.sd.googol.multicast.ReliableMulticast;
 import pt.uc.sd.googol.queue.URLQueueInterface;
 
-/**
- * Thread de trabalho (Worker) responsável por descarregar e processar uma página Web.
- * <p>
- * Cada worker opera num ciclo contínuo:
- * <ol>
- * <li>Pede um URL à {@link URLQueueInterface} remota.</li>
- * <li>Verifica se o URL é permitido pelo {@link RobotsTxtParser}.</li>
- * <li>Descarrega o conteúdo HTML usando Jsoup.</li>
- * <li>Extrai título, texto (palavras) e links.</li>
- * <li>Envia os novos links descobertos de volta para a Queue.</li>
- * <li>Envia a informação processada (PageInfo) para os Barrels via Multicast.</li>
- * </ol>
- *
- * @author André Ramos 2023227306
- */
 public class DownloaderWorker implements Runnable {
     
     private final int workerId;

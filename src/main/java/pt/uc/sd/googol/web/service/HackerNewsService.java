@@ -40,7 +40,7 @@
  *  - Falhas individuais não interrompem o processamento global.
  *
  *  @Autor:
- *   André Ramos — 2023227306
+ *   Elemento 1: André Ramos — 2023227306
  */
 
 package pt.uc.sd.googol.web.service;
@@ -51,19 +51,6 @@ import org.springframework.web.client.RestTemplate;
 import pt.uc.sd.googol.gateway.GatewayInterface;
 import pt.uc.sd.googol.web.model.HackerNewsItemRecord;
 
-/**
- * Serviço responsável pela integração com a API REST do Hacker News.
- * <p>
- * Esta classe encarrega-se de:
- * <ul>
- * <li>Consultar a API pública do Hacker News para obter as "top stories".</li>
- * <li>Obter os detalhes de cada história (título, URL, etc.).</li>
- * <li>Filtrar as histórias com base nos termos de pesquisa do utilizador.</li>
- * <li>Enviar os URLs relevantes para o Gateway (RMI) para serem indexados pelo Crawler.</li>
- * </ul>
- *
- * @author André Ramos 2023227306
- */
 @Service
 public class HackerNewsService {
 

@@ -54,16 +54,7 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
 
-/**
- * Interface RMI que define o ponto de entrada (Gateway) do sistema Googol.
- * <p>
- * Esta interface é disponibilizada aos clientes (CLI e Web) e serve como fachada
- * para todo o sistema distribuído. O Gateway encaminha os pedidos para os
- * componentes apropriados (Barrels para pesquisa, Queue para indexação) e
- * agrega estatísticas do sistema.
- *
- * @author André Ramos 2023227306
- */
+
 public interface GatewayInterface extends Remote {
 
     /**

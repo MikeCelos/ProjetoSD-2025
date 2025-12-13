@@ -46,17 +46,6 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-/**
- * Modelo de dados (DTO) que representa um item (notícia, comentário, etc.) da API do Hacker News.
- * <p>
- * Esta classe é utilizada para mapear automaticamente as respostas JSON provenientes da API externa
- * (https://hacker-news.firebaseio.com/v0/item/{id}.json) para objetos Java.
- * <p>
- * A anotação {@link JsonIgnoreProperties} garante que, se a API do Hacker News adicionar
- * novos campos no futuro, a aplicação não falha ao tentar processá-los.
- *
- * @author André Ramos 2023227306
- */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class HackerNewsItemRecord {
     

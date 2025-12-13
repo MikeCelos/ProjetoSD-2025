@@ -1,8 +1,3 @@
-package pt.uc.sd.googol.queue;
-
-import java.rmi.Remote;
-import java.rmi.RemoteException;
-
 /**
  * Interface RMI que define as operações remotas disponíveis no servidor de Fila (URL Queue).
  * <p>
@@ -12,8 +7,16 @@ import java.rmi.RemoteException;
  * <li><b>Gateway:</b> Que insere URLs prioritários pedidos pelos clientes e consulta estatísticas.</li>
  * </ul>
  *
- * @author André Ramos 2023227306
+ * @author Elemento 1: André Ramos (2023227306)
  */
+
+
+package pt.uc.sd.googol.queue;
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+
 public interface URLQueueInterface extends Remote {
 
     /**
