@@ -41,7 +41,7 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
 
     private pt.uc.sd.googol.gateway.GatewayInterface gateway; // Importante: usar o caminho completo ou importar
     private final java.util.concurrent.atomic.AtomicInteger pendingChanges = new java.util.concurrent.atomic.AtomicInteger(0);
-    private static final int NOTIFICATION_THRESHOLD = 5;
+    private static final int NOTIFICATION_THRESHOLD = 1;
     
     /**
      * Construtor do Barrel.
@@ -89,17 +89,37 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
         
         // Shutdown Hook para gravar ao fechar
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (isReady) saveToDisk();
+                if (isReady) saveToDisk();
+            }));
+
+            new Thread(() -> {
+            connectToGatewayAndRegister();
+        }).start();
+        
+        // 2. Garantir que avisa quando o programa fecha (Ctrl+C)
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                if (gateway != null) {
+                    gateway.unregisterBarrel(this);
+                }
+            } catch (Exception e) { /* Ignorar erro no fecho */ }
         }));
     }
 
-    private void connectToGateway() {
-        try {
-            // Ajusta a porta (1099) se o teu Gateway estiver noutra porta
-            java.rmi.registry.Registry registry = java.rmi.registry.LocateRegistry.getRegistry("localhost", 1099);
-            this.gateway = (pt.uc.sd.googol.gateway.GatewayInterface) registry.lookup("gateway");
-        } catch (Exception e) {
-            System.err.println(" [Barrel] Erro ao conectar ao Gateway para notificações: " + e.getMessage());
+    private void connectToGatewayAndRegister() {
+        while (gateway == null) { // Tenta até conseguir
+            try {
+                Registry registry = LocateRegistry.getRegistry("localhost", 1100); // Ajusta porta se necessário
+                gateway = (GatewayInterface) registry.lookup("gateway");
+                
+                // CHAMA O REGISTO
+                gateway.registerBarrel(this);
+                System.out.println(" [Barrel] Registado no Gateway com sucesso!");
+                
+            } catch (Exception e) {
+                System.err.println(" [Barrel] Gateway não encontrado. A tentar novamente em 5s...");
+                try { Thread.sleep(5000); } catch (InterruptedException i) {}
+            }
         }
     }
     

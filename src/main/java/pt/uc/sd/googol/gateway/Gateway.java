@@ -12,6 +12,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Ponto de entrada (Gateway) do sistema Googol.
  * <p>
@@ -78,6 +81,30 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
         
         System.out.println(" Gateway inicializado com " + barrels.size() + " barrels");
+    }
+
+    // Adiciona estes métodos na classe Gateway
+
+    @Override
+    public void registerBarrel(BarrelInterface barrel) throws RemoteException {
+        // Evitar duplicados
+        if (!barrels.contains(barrel)) {
+            barrels.add(barrel);
+            System.out.println(" [Gateway] Novo Barrel registado! Total: " + barrels.size());
+            
+            // AQUI ESTÁ A MAGIA: Avisar o frontend imediatamente
+            notifyListeners();
+        }
+    }
+
+    @Override
+    public void unregisterBarrel(BarrelInterface barrel) throws RemoteException {
+        if (barrels.remove(barrel)) {
+            System.out.println(" [Gateway] Barrel saiu. Restantes: " + barrels.size());
+            
+            // AVISAR O FRONTEND IMEDIATAMENTE
+            notifyListeners();
+        }
     }
 
     @Override
@@ -185,10 +212,8 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             
             System.out.println(" Encontrados " + results.size() + " resultados em " + duration + "ms (Barrel " + barrelIdx + ")");
 
-            if (page == 0) {
-                // Executa numa thread à parte para não atrasar a resposta ao utilizador
-                new Thread(() -> checkAndNotify(true)).start();
-            }
+            // Executa numa thread à parte para não atrasar a resposta ao utilizador
+            new Thread(() -> checkAndNotify(true)).start();
 
             return results;
             
@@ -204,8 +229,6 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
     }
 
-    // Em Gateway.java
-
     /**
      * Verifica mudanças e notifica os listeners.
      */
@@ -215,31 +238,30 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         try {
             // 1. Verificar Top 10
             if (checkRanking) {
-                // Usa o TEU método getTop10() que retorna List<Search>
                 List<Search> currentTopObj = getTop10(); 
-                
-                // Converter para List<String> para comparar com a cache lastTop10 (que assumo ser List<String>)
                 List<String> currentTopStrings = new ArrayList<>();
                 for (Search s : currentTopObj) {
                     currentTopStrings.add(s.getSearch() + " (" + s.getAccesses() + ")");
                 }
 
-                // Compara
-                if (!currentTopStrings.equals(cachedTop10Strings)) { // Usa a variável que já tinhas: cachedTop10Strings
+                if (!currentTopStrings.equals(cachedTop10Strings)) {
                     cachedTop10Strings = currentTopStrings;
                     changed = true;
                 }
             }
 
-            // 2. Verificar Estado dos Barrels (Assinatura)
-            // Lógica manual em vez de chamar "gerarAssinaturaBarrels()"
+            // 2. Verificar Estado dos Barrels
             StringBuilder sb = new StringBuilder();
-            List<Stats> currentStats = getStatsObjects(); // Usa o TEU método getStats()
+            List<Stats> currentStats = getStatsObjects(); 
+            
             for (Stats s : currentStats) {
                 if (!"gateway".equals(s.getServerName())) {
                     sb.append(s.getServerName())
                       .append(s.getIndexedUrls())
-                      .append(s.getIndexedWords());
+                      .append(s.getIndexedWords())
+                      // --- CORREÇÃO: ADICIONAR O TEMPO À VERIFICAÇÃO ---
+                      .append(s.getAvgResponseTime()); 
+                      // -------------------------------------------------
                 }
             }
             String currentSig = sb.toString();
@@ -255,28 +277,32 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             }
 
         } catch (Exception e) {
-            System.err.println("Erro no checkAndNotify: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void notifyListeners() {
         try {
+
+            System.out.println(" [Gateway] A notificar " + listeners.size() + " ouvintes...");
+
             Map<String, Object> statsMap = new HashMap<>();
             
             // 1. Top Queries
             statsMap.put("topQueries", cachedTop10Strings);
             
-            // 2. Queue Size (Tenta obter, senão 0)
+            // 2. Queue Size
             try { statsMap.put("queueSize", getQueueSize()); } catch(Exception e) { statsMap.put("queueSize", 0); }
             try { statsMap.put("downloadersActive", getActiveDownloaders()); } catch(Exception e) { statsMap.put("downloadersActive", 0); }
 
-            // 3. Obter Stats e Preparar Listas para o Frontend
+            // 3. Obter Stats
             List<Stats> allStats = getStatsObjects();
-            int totalBarrels = 0;
-
-            // Listas que o HTML espera receber
+            
+            // Listas para o Frontend
             List<Map<String, Object>> latenciesList = new ArrayList<>();
             List<Map<String, Object>> storageList = new ArrayList<>();
+            
+            int totalBarrels = 0;
 
             for (Stats s : allStats) {
                 // Ignorar o gateway
@@ -287,14 +313,21 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
                 // Extrair ID ("barrel0" -> "0")
                 String id = s.getServerName().replace("barrel", "");
 
-                // A. Preparar Latência
+                // A. Preparar Latência (SEMPRE adiciona, mesmo sem dados)
                 Map<String, Object> lat = new HashMap<>();
                 lat.put("barrelId", id);
-                // Formata para 2 casas decimais (ex: "12.50")
-                lat.put("avgMs", String.format(java.util.Locale.US, "%.2f", s.getAvgResponseTime()));
+                
+                // Se avgResponseTime for -1, significa "sem dados ainda"
+                if (s.getAvgResponseTime() < 0) {
+                    lat.put("avgMs", "N/A"); // ← MUDANÇA: mostra "N/A" em vez de "-1.00"
+                    lat.put("status", "active"); // ← NOVO: indica que está ativo mas sem medições
+                } else {
+                    lat.put("avgMs", String.format(Locale.US, "%.2f", s.getAvgResponseTime()));
+                    lat.put("status", "measured"); // ← NOVO: indica que tem medições
+                }
                 latenciesList.add(lat);
 
-                // B. Preparar Memória (Storage)
+                // B. Preparar Memória (Storage) - SEMPRE adiciona
                 Map<String, Object> store = new HashMap<>();
                 store.put("barrelId", id);
                 store.put("count", s.getIndexedUrls());
@@ -305,6 +338,10 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             statsMap.put("barrelLatencies", latenciesList);
             statsMap.put("barrelStorage", storageList);
             statsMap.put("barrelsActive", totalBarrels);
+
+            System.out.println("[DEBUG] Enviando stats: " + totalBarrels + " barrels, " + 
+                            latenciesList.size() + " latências, " + 
+                            storageList.size() + " storages");
 
             // Enviar para os ouvintes
             for (StatsListener listener : listeners) {
@@ -320,60 +357,77 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     }
 
     public List<Search> getTop10() {
-        // ... a tua lógica de obter o top 10 ...
-        // Se ainda não tens lógica, retorna uma lista vazia para compilar:
-        return new ArrayList<>(); 
+        // Pega no mapa de contagens (searchCounts), ordena e extrai os 10 primeiros
+        return searchCounts.entrySet().stream()
+            .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // Ordem Decrescente (Maior -> Menor)
+            .limit(10) // Apenas os 10 primeiros
+            .map(entry -> new Search(entry.getKey(), entry.getValue())) // Converte para objeto Search
+            .collect(Collectors.toList());
     }
 
     public List<Stats> getStatsObjects() {
         List<Stats> list = new ArrayList<>();
         
-        // 1. Adiciona Gateway (Placeholder ou dados do próprio gateway)
-        list.add(new Stats("gateway", 0, 0));
-
-        // 2. Percorre os barrels para juntar (Dados do Barrel) + (Dados do Gateway)
+        // Adiciona o Gateway
+        Stats gwStats = new Stats();
+        gwStats.setServerName("gateway");
+        list.add(gwStats);
+    
+        // Percorre TODOS os barrels
         for (int i = 0; i < barrels.size(); i++) {
+            // Nome provisório caso o RMI falhe
             String name = "barrel" + i;
             int urls = 0;
             int words = 0;
             double avgTime = 0.0;
-
+    
             try {
-                // A. Obter dados de armazenamento (vindos do Barrel)
-                String s = barrels.get(i).getStats(); 
-                // Parsing da string antiga [Barrel0] P:10 | T:20
-                try {
-                    String[] parts = s.split("\\|");
-                    for (String p : parts) {
-                        p = p.trim();
-                        if (p.startsWith("P:")) urls = Integer.parseInt(p.substring(2));
-                        if (p.startsWith("T:")) words = Integer.parseInt(p.substring(2));
+                // Tenta obter dados via RMI
+                String s = barrels.get(i).getStats(); // Ex: "[Barrel0] P:150 | T:300"
+                
+                if (s != null) {
+                    // --- CORREÇÃO AQUI (USAR REGEX) ---
+                    
+                    // 1. Extrair Nome Real [BarrelX]
+                    Matcher mName = Pattern.compile("\\[(Barrel\\d+)\\]").matcher(s);
+                    if (mName.find()) {
+                        name = mName.group(1).toLowerCase(); // "barrel0"
                     }
-                } catch (Exception parseEx) {}
 
-                // B. Calcular Média de Tempo (Dados locais do Gateway)
-                // O enunciado pede "medido pela Gateway"
+                    // 2. Extrair URLs (P:...)
+                    Matcher mUrls = Pattern.compile("P:(\\d+)").matcher(s);
+                    if (mUrls.find()) {
+                        urls = Integer.parseInt(mUrls.group(1));
+                    }
+
+                    // 3. Extrair Palavras (T:...)
+                    Matcher mWords = Pattern.compile("T:(\\d+)").matcher(s);
+                    if (mWords.find()) {
+                        words = Integer.parseInt(mWords.group(1));
+                    }
+                    // ----------------------------------
+                }
+                
+                // Calcular Média de Tempo (em ms)
                 List<Long> times = responseTimes.get(i);
                 if (times != null && !times.isEmpty()) {
                     double totalMs = 0;
                     for (Long t : times) totalMs += t;
                     avgTime = totalMs / times.size();
-                } else {
-                    // SEM DADOS: Define como -1 para indicar "sem medições"
-                    avgTime = -1.0;
                 }
+    
             } catch (Exception e) {
-                // Barrel offline, mantemos urls=0
+                System.err.println("Barrel " + i + " falhou ou está offline.");
             }
-
-            // C. Criar objeto final
-            Stats barrelStats = new Stats(); 
+    
+            // Adiciona à lista (mesmo que tenha falhado, vai com zeros)
+            Stats barrelStats = new Stats();
             barrelStats.setServerName(name);
             barrelStats.setIndexedUrls(urls);
             barrelStats.setIndexedWords(words);
-            barrelStats.setServerUptime(0L); // O L garante que é Long
+            barrelStats.setServerUptime(0L);
             barrelStats.setAvgResponseTime(avgTime);
-
+            
             list.add(barrelStats);
         }
         return list;

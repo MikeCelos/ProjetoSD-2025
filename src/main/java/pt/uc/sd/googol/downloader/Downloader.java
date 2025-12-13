@@ -60,7 +60,7 @@ public class Downloader {
             this.urlQueue.registerDownloader();
             
             // Teste: Ping para ver se está vivo
-            System.out.println(" ✓ " + this.urlQueue.ping());
+            System.out.println( this.urlQueue.ping());
 
             // Shutdown Hook: Garante que o downloader se "desregistra" se for fechado (Ctrl+C)
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {

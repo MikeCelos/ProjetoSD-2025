@@ -84,4 +84,10 @@ public interface GatewayInterface extends Remote {
 
     // Barrels chamam isto para avisar que indexaram algo novo
     void barrelNotifyUpdate() throws RemoteException;
+
+    // O Barrel chama isto quando arranca
+    void registerBarrel(pt.uc.sd.googol.barrel.BarrelInterface barrel) throws java.rmi.RemoteException;
+    
+    // O Barrel chama isto quando encerra graciosamente
+    void unregisterBarrel(pt.uc.sd.googol.barrel.BarrelInterface barrel) throws java.rmi.RemoteException;
 }

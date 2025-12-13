@@ -700,16 +700,19 @@
                 });
 
                 const latenciesElem = document.getElementById('stats-latencies');
-                latenciesElem.innerHTML = '';
-                (data.barrelLatencies || []).forEach(function (b) {
-                    const li = document.createElement('li');
-                    if (b.avgMs === "-1.00") {
-                        li.textContent = 'Barrel ' + b.barrelId + ': Sem dados';
-                    } else {
-                        li.textContent = 'Barrel ' + b.barrelId + ': ' + b.avgMs + ' ms';
-                    }
-                    latenciesElem.appendChild(li);
-                });
+                    latenciesElem.innerHTML = '';
+                    (data.barrelLatencies || []).forEach(function (b) {
+                        const li = document.createElement('li');
+                        
+                        // Verifica se é "N/A" ou um número
+                        if (b.avgMs === "N/A" || b.avgMs === "-1.00") {
+                            li.innerHTML = `Barrel ${b.barrelId}: <span style="color: #22c55e;">●</span> Ativo (sem medições)`;
+                        } else {
+                            li.innerHTML = `Barrel ${b.barrelId}: <span style="color: #22c55e;">●</span> ${b.avgMs} ms`;
+                        }
+                        
+                        latenciesElem.appendChild(li);
+                    });
 
                 // --- NOVO CÓDIGO (ADICIONA ISTO) ---
                 const memContainer = document.getElementById('stats-memory-container');

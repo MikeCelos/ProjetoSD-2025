@@ -2,10 +2,13 @@ package pt.uc.sd.googol.web.controller;
 
 import pt.uc.sd.googol.web.service.HackerNewsService;
 import pt.uc.sd.googol.web.service.OllamaService;
+import pt.uc.sd.googol.web.service.StatsListenerImpl;
 import pt.uc.sd.googol.gateway.GatewayInterface;
 import pt.uc.sd.googol.gateway.SearchResult;
 
-import org.springframework.beans.factory.annotation.Autowired; 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +18,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controlador principal da aplicação Web (Frontend Spring Boot).
@@ -54,6 +58,22 @@ public class WebController {
         this.hnService = hnService;
         this.ollamaService = ollamaService;
         this.gateway = gateway;
+    }
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    /**
+     * Quando o JavaScript envia para "/app/request-stats"
+     * Respondemos imediatamente para "/topic/stats"
+     */
+    @MessageMapping("/request-stats")
+    public void sendInitialStats() {
+        
+        Map<String, Object> lastStats = StatsListenerImpl.getLastStats();
+        
+        // Envia diretamente para o tópico (todos os conectados recebem)
+        messagingTemplate.convertAndSend("/topic/stats", lastStats);
     }
 
     /**
