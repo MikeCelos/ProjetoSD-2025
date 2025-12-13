@@ -118,7 +118,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     @Override
     public void barrelNotifyUpdate() throws RemoteException {
         // Um Barrel avisou que indexou algo. Vamos verificar e notificar o WebServer.
-        checkAndNotify(false); 
+        checkAndNotify(false, true);
     }
 
     /**
@@ -229,11 +229,13 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
     }
 
-    /**
-     * Verifica mudanças e notifica os listeners.
-     */
     private synchronized void checkAndNotify(boolean checkRanking) {
-        boolean changed = false;
+        checkAndNotify(checkRanking, false); // Chama versão com força = false
+    }
+
+    private synchronized void checkAndNotify(boolean checkRanking, boolean force) {
+        System.out.println("[DEBUG] checkAndNotify chamado. checkRanking=" + checkRanking + " force=" + force);
+        boolean changed = force; // ← Se force=true, sempre notifica
 
         try {
             // 1. Verificar Top 10
@@ -250,28 +252,30 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
                 }
             }
 
-            // 2. Verificar Estado dos Barrels
-            StringBuilder sb = new StringBuilder();
-            List<Stats> currentStats = getStatsObjects(); 
-            
-            for (Stats s : currentStats) {
-                if (!"gateway".equals(s.getServerName())) {
-                    sb.append(s.getServerName())
-                      .append(s.getIndexedUrls())
-                      .append(s.getIndexedWords())
-                      // --- CORREÇÃO: ADICIONAR O TEMPO À VERIFICAÇÃO ---
-                      .append(s.getAvgResponseTime()); 
-                      // -------------------------------------------------
+            // 2. Verificar Estado dos Barrels (só se não forçar)
+            if (!force) {
+                StringBuilder sb = new StringBuilder();
+                List<Stats> currentStats = getStatsObjects(); 
+                
+                for (Stats s : currentStats) {
+                    if (!"gateway".equals(s.getServerName())) {
+                        sb.append(s.getServerName())
+                        .append(s.getIndexedUrls())
+                        .append(s.getIndexedWords())
+                        .append(s.getAvgResponseTime()); 
+                    }
                 }
-            }
-            String currentSig = sb.toString();
+                String currentSig = sb.toString();
 
-            if (!currentSig.equals(lastBarrelState)) {
-                lastBarrelState = currentSig;
-                changed = true;
+                if (!currentSig.equals(lastBarrelState)) {
+                    lastBarrelState = currentSig;
+                    changed = true;
+                }
             }
 
             // 3. Notificar se houve mudanças
+            System.out.println("[DEBUG] changed=" + changed + " | Top10Size=" + cachedTop10Strings.size());
+
             if (changed) {
                 notifyListeners();
             }

@@ -56,53 +56,71 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
         this.barrelId = barrelId;
         this.dataFileName = "barrel" + barrelId + ".dat";
         
-        // Thread de Inicialização (Sync + Load)
+        // Thread de Inicialização
         new Thread(() -> {
-            System.out.println(" [Barrel" + barrelId + "] A iniciar processo de recuperação...");
+            System.out.println("╔════════════════════════════════════════════");
+            System.out.println("║ [Barrel" + barrelId + "] Iniciando recuperação...");
             
             // 1. Tentar Sincronizar de outro par (P2P)
             boolean synced = syncFromPeer();
             
-            // 2. Se a sincronização falhar, tentar ler do disco local
+            // 2. Se falhar, tentar ler do disco
             if (!synced) {
                 loadFromDisk();
             }
             
-            // Marcar como pronto! A partir de agora podemos gravar em disco.
+            // 3. Marcar como pronto
             isReady = true;
-            System.out.println(" [Barrel" + barrelId + "] ESTADO: ONLINE E PRONTO (Total: " + pages.size() + " páginas)");
             
-            // Forçar uma gravação imediata para garantir consistência
+            System.out.println("║ [Barrel" + barrelId + "] PRONTO!");
+            System.out.println("║ Total páginas: " + pages.size());
+            System.out.println("║ Total termos: " + index.size());
+            System.out.println("╚════════════════════════════════════════════");
+            
+            // 4. Gravar estado
             saveToDisk();
             
+            // ═══════════════════════════════════════════════════════
+            // ✨ NOVO: NOTIFICAR O GATEWAY QUE ESTAMOS PRONTOS
+            // ═══════════════════════════════════════════════════════
+            if (gateway != null && pages.size() > 0) {
+                try {
+                    System.out.println("[Barrel" + barrelId + "] Notificando Gateway sobre dados carregados...");
+                    gateway.barrelNotifyUpdate();
+                } catch (RemoteException e) {
+                    System.err.println("[Barrel" + barrelId + "] Erro ao notificar Gateway: " + e.getMessage());
+                }
+            }
+            
         }).start();
-
-        // Thread de Auto-Save (a cada 10s)
+        
+        // Thread de Auto-Save
         new Thread(() -> {
             while (true) {
                 try {
                     Thread.sleep(10000);
-                    if (isReady) saveToDisk(); // Só grava se estiver pronto
+                    if (isReady) saveToDisk();
                 } catch (InterruptedException e) { break; }
             }
         }).start();
         
-        // Shutdown Hook para gravar ao fechar
+        // Shutdown Hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                if (isReady) saveToDisk();
-            }));
+            if (isReady) saveToDisk();
+        }));
 
-            new Thread(() -> {
+        // Thread para conectar ao Gateway (EXISTENTE)
+        new Thread(() -> {
             connectToGatewayAndRegister();
         }).start();
         
-        // 2. Garantir que avisa quando o programa fecha (Ctrl+C)
+        // Shutdown Hook para desregistar (EXISTENTE)
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 if (gateway != null) {
                     gateway.unregisterBarrel(this);
                 }
-            } catch (Exception e) { /* Ignorar erro no fecho */ }
+            } catch (Exception e) { /* Ignorar */ }
         }));
     }
 
@@ -278,7 +296,24 @@ public class SimpleBarrel extends UnicastRemoteObject implements BarrelInterface
 
     @Override
     public String getStats() throws RemoteException {
-        return String.format("[Barrel%d] P:%d | T:%d | B:%d", barrelId, pages.size(), index.size(), backlinks.size());
+        // Aguardar até estar pronto (máximo 30s)
+        int attempts = 0;
+        while (!isReady && attempts < 60) {
+            try {
+                Thread.sleep(500); // Aguarda 0.5s
+                attempts++;
+            } catch (InterruptedException e) {
+                break;
+            }
+        }
+        
+        // Se ainda não está pronto após 30s, algo está errado
+        if (!isReady) {
+            return String.format("[Barrel%d] P:0 | T:0 | B:0 (⚠ Timeout)", barrelId);
+        }
+        
+        return String.format("[Barrel%d] P:%d | T:%d | B:%d", 
+            barrelId, pages.size(), index.size(), backlinks.size());
     }
 
     @Override
