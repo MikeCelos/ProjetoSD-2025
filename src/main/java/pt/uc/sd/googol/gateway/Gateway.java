@@ -261,35 +261,52 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
 
     private void notifyListeners() {
         try {
-            // Prepara o mapa de dados
             Map<String, Object> statsMap = new HashMap<>();
             
-            // Põe as Top Queries (Strings)
-            statsMap.put("topQueries", cachedTop10Strings); 
+            // 1. Top Queries
+            statsMap.put("topQueries", cachedTop10Strings);
             
-            // Põe os dados dos Barrels
-            // Filtra o gateway fora, queremos só barrels ativos
-            List<Stats> allStats = getStatsObjects();
-            List<Stats> activeBarrels = new ArrayList<>();
-            int totalBarrels = 0;
-            int totalDownloaders = 0; 
-            
-            // Tenta obter tamanho da Queue se possível
+            // 2. Queue Size (Tenta obter, senão 0)
             try { statsMap.put("queueSize", getQueueSize()); } catch(Exception e) { statsMap.put("queueSize", 0); }
-            
-            // Parsing rápido para preencher o JSON igual ao que o JS espera
-            for (Stats s : allStats) {
-                if (!s.getServerName().equals("gateway")) {
-                    activeBarrels.add(s);
-                    totalBarrels++;
-                }
-            }
-            
-            statsMap.put("activeBarrels", activeBarrels); // Envia lista completa de stats
-            statsMap.put("barrelsActive", totalBarrels);
-            statsMap.put("downloadersActive", getActiveDownloaders()); // Se tiveres este método
+            try { statsMap.put("downloadersActive", getActiveDownloaders()); } catch(Exception e) { statsMap.put("downloadersActive", 0); }
 
-            // Envia para todos os listeners
+            // 3. Obter Stats e Preparar Listas para o Frontend
+            List<Stats> allStats = getStatsObjects();
+            int totalBarrels = 0;
+
+            // Listas que o HTML espera receber
+            List<Map<String, Object>> latenciesList = new ArrayList<>();
+            List<Map<String, Object>> storageList = new ArrayList<>();
+
+            for (Stats s : allStats) {
+                // Ignorar o gateway
+                if ("gateway".equals(s.getServerName())) continue;
+
+                totalBarrels++;
+                
+                // Extrair ID ("barrel0" -> "0")
+                String id = s.getServerName().replace("barrel", "");
+
+                // A. Preparar Latência
+                Map<String, Object> lat = new HashMap<>();
+                lat.put("barrelId", id);
+                // Formata para 2 casas decimais (ex: "12.50")
+                lat.put("avgMs", String.format(java.util.Locale.US, "%.2f", s.getAvgResponseTime()));
+                latenciesList.add(lat);
+
+                // B. Preparar Memória (Storage)
+                Map<String, Object> store = new HashMap<>();
+                store.put("barrelId", id);
+                store.put("count", s.getIndexedUrls());
+                storageList.add(store);
+            }
+
+            // Enviar com os nomes EXATOS que o JavaScript procura
+            statsMap.put("barrelLatencies", latenciesList);
+            statsMap.put("barrelStorage", storageList);
+            statsMap.put("barrelsActive", totalBarrels);
+
+            // Enviar para os ouvintes
             for (StatsListener listener : listeners) {
                 try {
                     listener.onStatsUpdated(statsMap);
@@ -311,18 +328,20 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     public List<Stats> getStatsObjects() {
         List<Stats> list = new ArrayList<>();
         
-        // Adiciona Gateway (Placeholder)
+        // 1. Adiciona Gateway (Placeholder ou dados do próprio gateway)
         list.add(new Stats("gateway", 0, 0));
 
-        // Percorre barrels e extrai dados das Strings
+        // 2. Percorre os barrels para juntar (Dados do Barrel) + (Dados do Gateway)
         for (int i = 0; i < barrels.size(); i++) {
+            String name = "barrel" + i;
+            int urls = 0;
+            int words = 0;
+            double avgTime = 0.0;
+
             try {
-                String s = barrels.get(i).getStats(); // "[Barrel0] P:10 | T:20 | B:5"
-                
-                int urls = 0;
-                int words = 0;
-                
-                // Parsing simples
+                // A. Obter dados de armazenamento (vindos do Barrel)
+                String s = barrels.get(i).getStats(); 
+                // Parsing da string antiga [Barrel0] P:10 | T:20
                 try {
                     String[] parts = s.split("\\|");
                     for (String p : parts) {
@@ -332,10 +351,30 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
                     }
                 } catch (Exception parseEx) {}
 
-                list.add(new Stats("barrel" + i, urls, words));
+                // B. Calcular Média de Tempo (Dados locais do Gateway)
+                // O enunciado pede "medido pela Gateway"
+                List<Long> times = responseTimes.get(i);
+                if (times != null && !times.isEmpty()) {
+                    double totalMs = 0;
+                    for (Long t : times) totalMs += t;
+                    avgTime = totalMs / times.size();
+                } else {
+                    // SEM DADOS: Define como -1 para indicar "sem medições"
+                    avgTime = -1.0;
+                }
             } catch (Exception e) {
-                // Barrel offline
+                // Barrel offline, mantemos urls=0
             }
+
+            // C. Criar objeto final
+            Stats barrelStats = new Stats(); 
+            barrelStats.setServerName(name);
+            barrelStats.setIndexedUrls(urls);
+            barrelStats.setIndexedWords(words);
+            barrelStats.setServerUptime(0L); // O L garante que é Long
+            barrelStats.setAvgResponseTime(avgTime);
+
+            list.add(barrelStats);
         }
         return list;
     }
@@ -576,37 +615,6 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-    public static class Stats implements java.io.Serializable {
-        private String serverName;
-        private int indexedUrls;
-        private int indexedWords;
-        // Adiciona getters/setters necessários ou usa public
-        public Stats(String name, int urls, int words) {
-            this.serverName = name; this.indexedUrls = urls; this.indexedWords = words;
-        }
-        public String getServerName() { return serverName; }
-        public int getIndexedUrls() { return indexedUrls; }
-        public int getIndexedWords() { return indexedWords; }
-    }
-
-    // Classe auxiliar para Search (para resolver o conflito com o Spring)
-    public static class Search implements java.io.Serializable, Comparable<Search> {
-        private String term;
-        private int count;
-        
-        public Search(String term, int count) {
-            this.term = term;
-            this.count = count;
-        }
-        
-        public String getSearch() { return term; }
-        public int getAccesses() { return count; }
-
-        @Override
-        public int compareTo(Search o) {
-            return Integer.compare(this.count, o.count);
         }
     }
 }

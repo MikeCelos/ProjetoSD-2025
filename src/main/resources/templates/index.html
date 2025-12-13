@@ -682,6 +682,9 @@
         stompClient.connect({}, function () {
             stompClient.subscribe('/topic/stats', function (message) {
                 const data = JSON.parse(message.body);
+                console.log('[WS] raw message.body:', message.body);
+                console.log('[WS] parsed data:', data);
+                console.log('[WS] barrelStorage count=', data.barrelStorage.length);
 
                 // --- ATUALIZAÇÕES EXISTENTES ---
                 document.getElementById('stats-downloaders').textContent = data.downloadersActive;
@@ -700,7 +703,11 @@
                 latenciesElem.innerHTML = '';
                 (data.barrelLatencies || []).forEach(function (b) {
                     const li = document.createElement('li');
-                    li.textContent = 'Barrel ' + b.barrelId + ': ' + b.avgMs + ' ms';
+                    if (b.avgMs === "-1.00") {
+                        li.textContent = 'Barrel ' + b.barrelId + ': Sem dados';
+                    } else {
+                        li.textContent = 'Barrel ' + b.barrelId + ': ' + b.avgMs + ' ms';
+                    }
                     latenciesElem.appendChild(li);
                 });
 
